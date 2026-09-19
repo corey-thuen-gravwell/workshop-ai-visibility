@@ -1,0 +1,38 @@
+# Source me:   . instructor/runbook/.runbookrc      (or add that line to ~/.bashrc)
+#
+# Puts the runbook scripts on PATH and gives the host-side ones short names that run over ssh,
+# so from the authoring box it is just:
+#     redeploy                  after editing a lab (sync + docs + student repo + seats)
+#     release --next            hand the room the next lab (repo files + the page on the share site)
+#     share publish labs/02-shadow-ai html
+#     preflight
+#     survey                    where is the room? (add --tags for what each seat has ingested)
+#     seat 14                   ssh in as workshop14
+#
+# HOST=other . instructor/runbook/.runbookrc   to point somewhere else (default: jarvis)
+
+_rb_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export RUNBOOK="$_rb_dir" WORKSHOP_HOST="${HOST:-jarvis}"
+case ":$PATH:" in *":$_rb_dir/scripts:"*) ;; *) export PATH="$_rb_dir/scripts:$PATH" ;; esac
+unset _rb_dir
+
+# ---- run here (authoring box) -------------------------------------------------------------
+redeploy()     { "$RUNBOOK/scripts/redeploy.sh" "$@"; }        # the big one
+deploy-share() { "$RUNBOOK/scripts/deploy-share.sh" "$@"; }    # docs only -> host staged/
+sync-repo()    { "$RUNBOOK/scripts/sync-repo.sh" "$@"; }       # repo only -> host /opt/workshop/src
+
+# ---- run on the host over ssh ------------------------------------------------------------------
+_rb_host() { local s="$1"; shift; ssh -t "$WORKSHOP_HOST" "/opt/workshop/src/instructor/runbook/scripts/$s $(printf '%q ' "$@")"; }
+release()       { _rb_host release-stage.sh "$@"; }   # status | --next | stage-x | --all   (THE lab release: files + page)
+share()         { _rb_host share.sh "$@"; }           # slides/materials/PDFs: status | publish <x> [html|pdf] | unpublish | refresh
+preflight()     { _rb_host preflight.sh "$@"; }
+survey()        { _rb_host seat-survey.sh "$@"; }    # read-only class state: stage, containers, proxies, data
+reset-seats()   { _rb_host reset-seats.sh "$@"; }     # START_ID=10 SEATS=1 reset-seats  (env travels: see below)
+build-student() { ssh -t "$WORKSHOP_HOST" "cd / && $(printf '%s=%q ' ${INITIAL_STAGE:+INITIAL_STAGE "$INITIAL_STAGE"}) /opt/workshop/src/instructor/runbook/scripts/build-student-repo.sh"; }
+seat()          { ssh "workshop${1:?seat number, e.g. seat 14}@$WORKSHOP_HOST"; }   # instructor key is in every seat
+
+# reset-seats honours SEATS/START_ID on the host, so pass them through:   reset-seat 10
+reset-seat()    { ssh -t "$WORKSHOP_HOST" "START_ID=${1:?seat number} SEATS=1 /opt/workshop/src/instructor/runbook/scripts/reset-seats.sh"; }
+
+runbook-help()  { sed -n '2,12p' "$RUNBOOK/.runbookrc" | sed 's/^# \?//'; }
+echo "runbook: redeploy · release · share · preflight · survey · reset-seats · reset-seat N · seat N · build-student   (runbook-help)"

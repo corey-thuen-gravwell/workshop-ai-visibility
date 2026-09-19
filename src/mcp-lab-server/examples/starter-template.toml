@@ -1,0 +1,97 @@
+# ============================================================================================
+# Starter template: copy this, rename it, and make it yours.
+#
+#   cp examples/starter-template.toml my-server.toml
+#   ./mcp_lab_server.py --config my-server.toml --validate
+#   ./mcp_lab_server.py --config my-server.toml --http 0.0.0.0:${WORKSHOPUID}91
+#
+# Every time you change this file you must RESTART the server. Clients cache the tool list from
+# `initialize`, so also restart opencode (or re-run `opencode mcp list`) to see your changes.
+# ============================================================================================
+
+[server]
+name = "my-server"                  # what the client displays
+version = "0.1.0"
+
+# Optional. Sent to the client during `initialize`; many clients feed it to the model.
+instructions = """
+Describe what this server is for, in a sentence or two.
+"""
+
+# ============================================================================================
+# TOOLS: add one [[tools]] block per tool.
+#
+# behavior =  what the tool DOES. Pick one:
+#
+#   static            returns `text` verbatim                         → text = "..."
+#   template          returns `text` with {arg} substituted            → text = "Hi {name}"
+#   echo              returns the arguments it was given               → (nothing to configure)
+#   forbidden_words   fails if any of `words` appears in the input     → words = [...], field = "text"
+#   required_words    fails if any of `words` is MISSING               → words = [...], field = "text"
+#   regex_check       matches `pattern`; `expect` = "absent"|"present" → pattern = "...", field = "text"
+#   word_count        counts words/chars, optional `max_words`         → field = "text", max_words = 50
+#   always_error      always returns an error (to see how clients cope)
+#   gravwell_grep_hoist  query advisor: needs `query` and `parse_result` (from Gravwell's parse_query
+#                     MCP tool) and suggests hoisting a late raw grep to the front of the pipeline
+#   threat_hunt       stub threat analysis over raw log text in `logs` (fetched by another server's
+#                     tool); refuses without data, scans for `indicators = [...]`, reports a verdict
+#
+# Optional on the checking behaviours:
+#   case_sensitive = true|false      pass_message = "..."      fail_message = "..."
+#   error_on_fail  = true|false      ← return a protocol error instead of a normal "failed" result
+# ============================================================================================
+
+[[tools]]
+name = "my_first_tool"
+
+# ⚠️ THE MOST IMPORTANT FIELD IN THIS FILE.
+# The model never sees your config, your code, or your intentions, only this text. It uses the
+# description alone to decide whether to call the tool, when, and with what. Write it as an
+# instruction to a capable colleague who cannot ask you questions.
+description = """
+Say what the tool does, and, just as important, WHEN the model should reach for it.
+Say what it returns, so the model knows how to interpret the answer.
+"""
+
+behavior = "static"
+text = "Replace me."
+
+# The input contract. The server enforces this before your behaviour runs, so a bad call is
+# rejected rather than half-executed. Delete this block to accept a single `text` argument.
+[tools.input_schema]
+type = "object"
+additionalProperties = false        # reject arguments you didn't declare
+required = ["text"]
+
+[tools.input_schema.properties.text]
+type = "string"
+description = "What this argument is for. The model reads this too."
+
+# ============================================================================================
+# PROMPTS (optional): reusable instructions the user can invoke by name.
+# Another, quieter way a server puts words into the model's context.
+# ============================================================================================
+
+# [[prompts]]
+# name = "my_prompt"
+# description = "What invoking this prompt does."
+# role = "user"
+# text = """
+# Instructions here. Use {placeholder} for arguments.
+# """
+#
+# [[prompts.arguments]]
+# name = "placeholder"
+# description = "What to pass."
+# required = true
+
+# ============================================================================================
+# RESOURCES (optional): read-only data the client can fetch by URI.
+# ============================================================================================
+
+# [[resources]]
+# uri = "example://my-data"
+# name = "My data"
+# description = "What this is."
+# mime_type = "text/plain"
+# text = "The content the client receives."

@@ -1,0 +1,122 @@
+# ============================================================================================
+# Looney Tunes Compliance: an MCP server, defined entirely in this file.
+#
+# Everything below becomes something the AI client can see. Edit it, restart the server, and the
+# client's view changes. You never touch mcp_lab_server.py.
+#
+#   ./mcp_lab_server.py --config examples/looney-tunes-compliance.toml --validate
+#   ./mcp_lab_server.py --config examples/looney-tunes-compliance.toml --http 0.0.0.0:${WORKSHOPUID}91
+# ============================================================================================
+
+[server]
+name = "looney-tunes-compliance"
+version = "1.0.0"
+
+# `instructions` is handed to the client during `initialize`. Some clients put it straight into
+# the model's context. You did not write a prompt for the model, but you just influenced one.
+instructions = """
+This server enforces Looney Tunes naming compliance. Before sending user-supplied text onward,
+check it with the check_looney_tunes_compliance tool.
+"""
+
+# ------------------------------------------------------------------ tool 1: the compliance check
+[[tools]]
+name = "check_looney_tunes_compliance"
+
+# READ THIS FIELD CAREFULLY. It is not documentation for a human. It is the only thing the model
+# uses to decide whether, when, and how to call your tool. Change the wording and you change the
+# model's behaviour without touching a line of code.
+description = """
+Check whether a piece of text complies with Looney Tunes naming policy.
+
+Use this tool whenever the user supplies text that will be stored, published, or sent onward.
+Returns COMPLIANT, or NON-COMPLIANT with the offending terms and their positions.
+"""
+
+behavior = "forbidden_words"
+field = "text"
+words = ["Bugs Bunny", "Daffy Duck", "Elmer Fudd", "Porky Pig"]
+case_sensitive = false
+pass_message = "COMPLIANT: no restricted Looney Tunes characters appear in this text."
+fail_message = "Remove or replace the restricted character names, then re-check."
+
+# The schema is a contract the server enforces. Try calling the tool with a misspelled argument
+# name and watch what comes back: that rejection is a real control, on the server side, that the
+# model cannot talk its way past.
+[tools.input_schema]
+type = "object"
+additionalProperties = false
+required = ["text"]
+
+[tools.input_schema.properties.text]
+type = "string"
+description = "The text to check for restricted character names."
+
+# ------------------------------------------------------------------ tool 2: publish the policy
+[[tools]]
+name = "get_compliance_policy"
+description = """
+Return the full Looney Tunes naming policy, including the list of restricted characters and the
+rationale. Call this when the user asks what the policy is or why text was rejected.
+"""
+behavior = "static"
+text = """
+LOONEY TUNES NAMING POLICY v1.0
+
+Restricted characters:  Bugs Bunny · Daffy Duck · Elmer Fudd · Porky Pig
+Permitted characters:   Road Runner · Wile E. Coyote · Marvin the Martian
+
+Rationale: the restricted names are subject to a licensing agreement that this organisation has
+not signed. The permitted names are not.
+
+Escalation: compliance@example.invalid
+"""
+
+# `input_schema` omitted on purpose: a tool that takes no arguments. The default schema requires
+# a `text` argument, so this tool declares an empty one explicitly.
+[tools.input_schema]
+type = "object"
+properties = {}
+additionalProperties = false
+required = []
+
+# ------------------------------------------------------------------ tool 3: length check
+[[tools]]
+name = "check_text_length"
+description = """
+Report the word and character count of a piece of text, and whether it exceeds the 50-word
+publication limit.
+"""
+behavior = "word_count"
+field = "text"
+max_words = 50
+
+# ------------------------------------------------------------------ a prompt
+# MCP servers can ship *prompts* as well as tools: reusable instructions the user can invoke by
+# name. This is a second, quieter way a server puts words into the model's context.
+[[prompts]]
+name = "review_for_compliance"
+description = "Ask the model to review a document against the Looney Tunes policy."
+role = "user"
+text = """
+Review the following text for Looney Tunes naming compliance. Use the
+check_looney_tunes_compliance tool, then summarise what you found and suggest replacements from
+the permitted-characters list.
+
+TEXT:
+{document}
+"""
+
+[[prompts.arguments]]
+name = "document"
+description = "The text to review."
+required = true
+
+# ------------------------------------------------------------------ a resource
+# Resources are read-only data the client can fetch by URI.
+[[resources]]
+uri = "policy://looney-tunes/restricted-characters"
+name = "Restricted character list"
+description = "The machine-readable list of restricted Looney Tunes character names."
+mime_type = "application/json"
+text = '{"restricted": ["Bugs Bunny", "Daffy Duck", "Elmer Fudd", "Porky Pig"], "version": "1.0"}'

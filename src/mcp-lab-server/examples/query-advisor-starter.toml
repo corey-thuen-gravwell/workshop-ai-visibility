@@ -1,0 +1,49 @@
+# ============================================================================================
+# Lab 07, Task 2: the query advisor. START HERE.
+#
+#   cp ~/jarvis/src/mcp-lab-server/examples/query-advisor-starter.toml ~/query-advisor.toml
+#   ~/jarvis/src/mcp-lab-server/mcp_lab_server.py --config ~/query-advisor.toml --validate
+#
+# The plumbing is done for you: server name, one tool, the behaviour, the argument schema. Your
+# job is the text the MODEL reads: every line marked WRITE ME. That text is the whole exercise.
+# Restart opencode after every change (it caches the tool list at start).
+# ============================================================================================
+
+[server]
+name = "query-advisor"
+version = "0.1.0"
+
+# Optional. Sent once during `initialize`; opencode hands it to the model as standing context.
+# Leave it empty for Task 2. Lab 07 Task 6 is where you find out what it can do.
+instructions = """
+"""
+
+[[tools]]
+name = "suggest_query_improvement"
+
+# WRITE ME. The model decides whether and how to call this tool from this text alone. It needs:
+#   1. WHEN to call it: what kind of user request should trigger it.
+#   2. What must happen BEFORE it is called: run Gravwell's parse_query tool on the exact query
+#      first, and pass the result through unchanged. (The behaviour refuses to run without it.)
+#   3. What comes back and what to do with it: show the suggested query verbatim, then validate
+#      that one with parse_query too.
+description = """
+WRITE ME
+"""
+
+behavior = "gravwell_grep_hoist"
+
+[tools.input_schema]
+type = "object"
+additionalProperties = false
+required = ["query", "parse_result"]
+
+[tools.input_schema.properties.query]
+type = "string"
+# WRITE ME: one sentence. The model reads argument descriptions too.
+description = "WRITE ME"
+
+[tools.input_schema.properties.parse_result]
+type = "string"
+# WRITE ME: say where this value comes from. (Task 3 will show you how much this line matters.)
+description = "WRITE ME"

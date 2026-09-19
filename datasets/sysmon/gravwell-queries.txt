@@ -1,0 +1,36 @@
+Gravwell Queries for AI Agent Detection
+
+Query 1: Count child processes by ParentProcessId (find high spawners)
+
+tag=sysmon xml Event.System.EventID as EventID Event.EventData.Data[Name]=="ParentProcessId" as ParentPID
+| eval EventID == "1"
+| stats count by ParentPID
+| sort by count desc
+| table ParentPID count
+
+Query 2: For a specific PID (e.g., 3565), show what processes it spawned
+
+tag=sysmon xml Event.System.EventID as EventID Event.EventData.Data[Name]=="ParentProcessId" as ParentPID Event.EventData.Data[Name]=="Image" as Image
+| eval EventID == "1"
+| eval ParentPID == "3565"
+| stats count by Image
+| sort by count desc
+| table Image count
+
+Query 3: Show actual bash commands from a specific parent PID
+
+tag=sysmon xml Event.System.EventID as EventID Event.EventData.Data[Name]=="ParentProcessId" as ParentPID Event.EventData.Data[Name]=="Image" as Image Event.EventData.Data[Name]=="CommandLine" as CommandLine
+| eval EventID == "1"
+| eval ParentPID == "3565"
+| grep -e Image "bash"
+| table CommandLine
+
+Query 4: Detect high bash spawners (potential AI agents)
+
+tag=sysmon xml Event.System.EventID as EventID Event.EventData.Data[Name]=="ParentProcessId" as ParentPID Event.EventData.Data[Name]=="Image" as Image
+| eval EventID == "1"
+| grep -e Image "bash"
+| stats count by ParentPID
+| eval count > 10
+| sort by count desc
+| table ParentPID count

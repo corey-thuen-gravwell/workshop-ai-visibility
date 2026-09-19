@@ -1,0 +1,84 @@
+# Lab 00: per-student Gravwell stack + LLM-ingester sidecar (M9).
+#
+# Design notes:
+#  - NAMED VOLUMES for etc+storage: clean persistence across up/down, initialized from the image,
+#    no root-owned-files-in-home problems. (Bind-mounting /opt/gravwell/etc fights the image.)
+#  - Authored config + license + certs layered in as read-only FILE MOUNTS over the etc volume.
+#  - HTTPS on 443 via the https.conf drop-in + mounted cert/key.
+#  - Ingest via simple_relay listeners (simple_relay-corelight.conf) -> `nc` each JSONL file.
+#  - Ingest auth: GRAVWELL_INGEST_AUTH (indexer) and GRAVWELL_INGEST_SECRET (bundled simple_relay)
+#    MUST be the same value: set only one and simple_relay cannot reach its own indexer. The
+#    llm-ingester sidecar uses the same secret over the compose network (gravwell:4023, not published).
+#
+# Ports derive from WORKSHOPUID: UI <ID>443, syslog <ID>514, ingest listeners <ID>01..14 (corelight dns/ssl/conn/http, proxy, okta, sysmon, logbot, litellm, mcp, osquery, swg, cloudtrail, gws),
+# LLM ingester <ID>80 (OpenAI-compatible) and <ID>81 (Anthropic Messages).
+
+name: ${WORKSHOPUID}
+
+services:
+  gravwell:
+    # PINNED. `:latest` is a moving tag and a stale local cache silently gives you an older
+    # build: a box here had 5.8.13 cached, where /api/mcp 404s and Lab 06 cannot run.
+    # MCP (the Gravwell MCP server at /api/mcp) requires 5.10.x.
+    image: gravwell/gravwell:5.10.1
+    container_name: ${WORKSHOPUID}gravwell
+    restart: unless-stopped
+    environment:
+      GRAVWELL_INGEST_AUTH: ${GRAVWELL_INGEST_SECRET:-IngestSecrets}
+      GRAVWELL_INGEST_SECRET: ${GRAVWELL_INGEST_SECRET:-IngestSecrets}
+    ports:
+      - "${WORKSHOPUID}443:443"           # web UI (HTTPS)
+      - "${WORKSHOPUID}514:514/udp"       # syslog UDP, image default listener (unused by the labs)
+      - "${WORKSHOPUID}01:7701"           # ingest: corelight_dns
+      - "${WORKSHOPUID}02:7702"           # ingest: corelight_ssl
+      - "${WORKSHOPUID}03:7703"           # ingest: corelight_conn
+      - "${WORKSHOPUID}04:7704"           # ingest: corelight_http
+      - "${WORKSHOPUID}05:7705"           # ingest: proxy (Python logging proxy JSONL over TCP)
+      - "${WORKSHOPUID}06:7706"           # ingest: okta (SSO logs, Method 4)
+      - "${WORKSHOPUID}07:7707"           # ingest: sysmon (Lab 03 XML)
+      - "${WORKSHOPUID}08:7708"           # ingest: logbot (Gravwell AI-assistant audit logs)
+      - "${WORKSHOPUID}09:7709"           # ingest: litellm container logs, raw text (M8) -> tag=syslog
+      - "${WORKSHOPUID}10:7710"           # ingest: the student's own MCP server, JSON-RPC (M10) -> tag=mcp
+      - "${WORKSHOPUID}11:7711"           # ingest: osquery endpoint inventory (shadow-AI beyond the wire) -> tag=osquery
+      - "${WORKSHOPUID}12:7712"           # ingest: secure web gateway access log (beyond the wire) -> tag=swg
+      - "${WORKSHOPUID}13:7713"           # ingest: AWS CloudTrail (beyond the wire) -> tag=cloudtrail
+      - "${WORKSHOPUID}14:7714"           # ingest: Google Workspace token audit (beyond the wire) -> tag=gws
+    volumes:
+      - gwetc:/opt/gravwell/etc
+      - gwstorage:/opt/gravwell/storage
+      - ./config/https.conf:/opt/gravwell/etc/gravwell.conf.d/https.conf:ro
+      - ./config/simple_relay-corelight.conf:/opt/gravwell/etc/simple_relay.conf.d/corelight.conf:ro
+      - ./config/simple_relay-proxy.conf:/opt/gravwell/etc/simple_relay.conf.d/proxy.conf:ro
+      - ./config/simple_relay-litellm.conf:/opt/gravwell/etc/simple_relay.conf.d/litellm.conf:ro
+      - ./config/simple_relay-mcp.conf:/opt/gravwell/etc/simple_relay.conf.d/mcp.conf:ro
+      - ./config/simple_relay-shadowai-sources.conf:/opt/gravwell/etc/simple_relay.conf.d/shadowai-sources.conf:ro
+      - ../../gravwell.license:/opt/gravwell/etc/license:ro
+      # Let's Encrypt cert. On the lab host WORKSHOP_CERT_DIR=/opt/workshop/certs (one shared,
+      # root-owned copy: the docker daemon mounts it, seat users can't read the private key).
+      # Self-hosted: leave it unset and drop your own cert/key in ./config/.
+      - ${WORKSHOP_CERT_DIR:-./config}/cert.pem:/opt/gravwell/etc/cert.pem:ro
+      - ${WORKSHOP_CERT_DIR:-./config}/key.pem:/opt/gravwell/etc/key.pem:ro
+
+  # M9, Gravwell's LLM ingester: an HTTP proxy that forwards to the model provider and ingests
+  # prompts, replies, tool calls and token usage under tag=llm. Official image; the ingest secret
+  # and indexer target are env-driven, the listeners come from config/llm_ingester.conf.
+  llm-ingester:
+    image: gravwell/llm_ingester:5.10.1
+    container_name: ${WORKSHOPUID}llm
+    restart: unless-stopped
+    depends_on: [gravwell]
+    environment:
+      GRAVWELL_INGEST_SECRET: ${GRAVWELL_INGEST_SECRET:-IngestSecrets}
+      GRAVWELL_CLEARTEXT_TARGETS: gravwell:4023
+    ports:
+      - "${WORKSHOPUID}80:4180"           # OpenAI-compatible listener  (opencode @ai-sdk/openai-compatible)
+      - "${WORKSHOPUID}81:4181"           # Anthropic Messages listener (opencode anthropic provider, Claude Code)
+    volumes:
+      # Mounted to a staging path and copied in at start: the ingester rewrites its config file
+      # on boot (stamps an Ingester-UUID via rename), which fails on a read-only bind mount.
+      - ./config/llm_ingester.conf:/config/llm_ingester.conf:ro
+    command: ["sh", "-c", "cp /config/llm_ingester.conf /opt/gravwell/etc/gravwell_llm_ingester.conf && exec /opt/gravwell/bin/manager"]
+
+volumes:
+  gwetc:
+  gwstorage:

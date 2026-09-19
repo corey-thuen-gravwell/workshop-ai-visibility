@@ -1,0 +1,57 @@
+# ============================================================================================
+# Lab 07, Task 4: the threat-hunt stub. START HERE.
+#
+#   cp ~/jarvis/src/mcp-lab-server/examples/threat-hunt-starter.toml ~/threat-hunt.toml
+#   ~/jarvis/src/mcp-lab-server/mcp_lab_server.py --config ~/threat-hunt.toml --validate
+#
+# The behaviour is a STUB: it confirms the entries arrived, scans them for the `indicators`
+# strings, and returns a verdict. It cannot fetch logs. Your job is the text the MODEL reads
+# (every WRITE ME), and the one thing that text must achieve is: fetch first, with Gravwell's
+# sample_tag_entries (or execute_query), then hand the entries here verbatim.
+# ============================================================================================
+
+[server]
+name = "threat-hunt"
+version = "0.1.0"
+
+# WRITE ME (optional but useful): one or two sentences about what this server is and what has
+# to happen before its tool is used.
+instructions = """
+WRITE ME
+"""
+
+[[tools]]
+name = "hunt_apt_cherdenko"
+
+# WRITE ME. It needs:
+#   1. WHEN: the user asks to hunt for / look for APT Cherdenko or threats in a Gravwell tag.
+#   2. BEFORE: this tool does NOT retrieve logs. Fetch the entries with the Gravwell
+#      sample_tag_entries tool (preferred) or execute_query first.
+#   3. HOW to pass them: the returned entry text verbatim and unsummarised as `logs`, plus the tag
+#      and the name of the Gravwell tool used.
+#   4. AFTER: report the verdict to the user exactly as returned.
+description = """
+WRITE ME
+"""
+
+behavior = "threat_hunt"
+adversary = "APT Cherdenko"
+indicators = ["cherdenko", "krukov", "iron curtain", "vacuum imploder", "kirov", "premier"]
+
+[tools.input_schema]
+type = "object"
+additionalProperties = false
+required = ["logs", "tag", "source_tool"]
+
+[tools.input_schema.properties.logs]
+type = "string"
+# WRITE ME: the raw entries exactly as the Gravwell tool returned them. Say "do not summarise".
+description = "WRITE ME"
+
+[tools.input_schema.properties.tag]
+type = "string"
+description = "WRITE ME"
+
+[tools.input_schema.properties.source_tool]
+type = "string"
+description = "WRITE ME"

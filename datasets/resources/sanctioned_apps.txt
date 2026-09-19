@@ -1,0 +1,7 @@
+App,Owner
+Slack,IT
+Zoom,IT
+Figma,Design
+Atlassian,Engineering
+Miro,Design
+Google Chrome,IT

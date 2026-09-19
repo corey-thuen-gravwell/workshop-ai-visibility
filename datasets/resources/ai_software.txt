@@ -1,0 +1,44 @@
+Name,Kind
+ollama,local-model-server
+lms,local-model-server
+lm-studio,local-model-server
+LM Studio,local-model-server
+llama_cpp_python,local-model-server
+llama-server,local-model-server
+vllm,local-model-server
+text-generation-webui,local-model-server
+gpt4all,local-model-server
+jan,local-model-server
+opencode,coding-agent
+opencode-ai,coding-agent
+claude,coding-agent
+@anthropic-ai/claude-code,coding-agent
+aider,coding-agent
+aider-chat,coding-agent
+cursor,coding-agent
+Cursor,coding-agent
+codex,coding-agent
+@openai/codex,coding-agent
+gh-copilot,coding-agent
+ChatGPT,desktop-app
+ChatGPT.exe,desktop-app
+Claude,desktop-app
+Claude.exe,desktop-app
+Microsoft 365 Copilot,desktop-app
+anthropic,sdk
+openai,sdk
+langchain,sdk
+langchain-core,sdk
+llama-index,sdk
+litellm,sdk
+transformers,sdk
+google-generativeai,sdk
+@anthropic-ai/sdk,sdk
+cloudflared,doh-client
+dnscrypt-proxy,doh-client
+AI Sidebar - ChatGPT Claude & Gemini,browser-extension
+Grammarly: AI Writing and Grammar Checker App,browser-extension
+Merlin: 1-click access to ChatGPT,browser-extension
+Monica - Your AI Copilot,browser-extension
+ChatGPT for Google,browser-extension
+Sider: ChatGPT Sidebar,browser-extension

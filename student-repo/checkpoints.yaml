@@ -1,0 +1,98 @@
+# Checkpoint manifest: the single source of truth for the student repo's stages.
+#
+# WHAT A STAGE IS:
+#   The student repo is a LINEAR, ADDITIVE history. Each stage is one commit that ADDS the files a
+#   lab needs, never modifies or removes a file an earlier stage introduced, and carries a
+#   `stage-*` tag. Students clone a served copy that only goes as far as the instructor has
+#   RELEASED (release-stage.sh), so a fresh seat holds Lab 01 and nothing else, and later labs
+#   appear with `git pull` as the course reaches them. Same idea as the share site: nothing is
+#   visible before it is taught.
+#
+#   The tag doubles as the recovery point for that lab:
+#       cd ~/jarvis && git checkout stage-<name> -- labs/<dir>
+#   restores that lab's files in place and touches nothing else.
+#
+# HOW IT IS BUILT: build-student-repo.sh reads this file, copies each stage's `paths` on top of the
+# previous ones, commits, tags. Rename / reorder / insert a stage = edit here and regenerate; never
+# hand-edit git history. `order` leaves gaps so a stage can slot between two others.
+#
+# RULES the build script enforces:
+#   - every `paths` entry exists in the authoring repo
+#   - a stage adds files only (a diff against the previous stage has no M or D entries)
+#   - the usual leak assertions on the final tree (answer keys, tokens, instructor/, ...)
+#
+# `paths` are relative to the authoring repo root; directories are copied whole, then the
+# redaction list in the build script removes anything instructor-only inside them.
+
+checkpoints:
+  - tag: stage-fundamentals
+    order: 5
+    module: Lab 01 (M2)
+    summary: Raw HTTP to a model API, no memory, whole conversation each turn, tools are requests.
+    paths: [labs/01-fundamentals]
+
+  - tag: stage-demystify
+    order: 8
+    module: Lab 01b (M2b)
+    summary: The seven demystification scripts (tokens/embed/similar/random/logprobs*) as shipped.
+    paths: [labs/01b-demystifying-ai]
+
+  - tag: stage-gravwell
+    order: 10
+    module: Lab 00 (Lab A)
+    summary: Gravwell + LLM-ingester sidecar compose, listener configs, the workshop license.
+    paths: [labs/00-environment-gravwell, gravwell.license]
+
+  - tag: stage-shadowai
+    order: 20
+    module: Lab 02 (M4)
+    summary: Corelight/Okta scenario data, the AI_DOMAINS resources and the upload helper.
+    paths:
+      - labs/02-shadow-ai
+      - datasets/corelight
+      - datasets/resources/ai_domains.txt
+      - datasets/resources/ai_domains_plus_api.txt
+      - datasets/resources/ai_api_endpoints.txt
+
+  - tag: stage-shadowai-sources
+    order: 25
+    module: P9 (padding, after Lab 02)
+    summary: Beyond-the-wire data (osquery/swg/cloudtrail/gws) for the same hosts; AI_SOFTWARE + SANCTIONED_APPS.
+    paths:
+      - labs/_stretch/shadow-ai-sources
+      - datasets/shadow-ai-sources
+      - datasets/resources/ai_software.txt
+      - datasets/resources/sanctioned_apps.txt
+
+  - tag: stage-sysmon
+    order: 30
+    module: Lab 03 (M5)
+    summary: Real Linux Sysmon events, re-timed onto the Lab 02 window (the original January capture stays instructor-side; two files would only invite ingesting the wrong one).
+    paths: [labs/03-endpoint-sysmon, datasets/sysmon/generated]
+
+  - tag: stage-opencode
+    order: 40
+    module: Lab 04 (M7)
+    summary: The moneyprinter project with its planted bug, and the opencode config walkthrough.
+    paths: [labs/04-opencode-config]
+
+  # One stage for the whole proxy lab. It was once four stages, which meant running `release --next`
+  # four times inside one lab: release ceremony with no teaching value.
+  - tag: stage-llm-proxy
+    order: 50
+    module: Lab 05 (M8 + M9)
+    summary: The whole proxy lab: litellm in docker, testai.sh, the reference captures showing what a content-capturing proxy and a product's own AI logs hold, the P8 padding lab that reads the latter, and the vendor-agnostic Python audit proxy.
+    paths: [labs/05-llm-proxy, datasets/proxy-captures, datasets/gravwell-ai-assistant,
+            labs/_stretch/ai-assistant-audit, src/logging-proxy]
+
+  - tag: stage-mcp
+    order: 75
+    module: Lab 06 (M10)
+    summary: MCP by hand against the seat's Gravwell, then the configurable lab MCP server.
+    paths: [labs/06-mcp-deep-dive, src/mcp-lab-server]
+
+  - tag: stage-mcp-tools
+    order: 80
+    module: Lab 07 (M11 + M12)
+    summary: MCP tool interaction across servers (the query advisor chained with Gravwell's own MCP server), and detecting it in tag=llm.
+    paths: [labs/07-mcp-tool-interaction]

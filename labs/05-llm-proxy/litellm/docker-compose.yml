@@ -1,0 +1,36 @@
+# Lab 05 Part 1 (M8): litellm gateway, one per seat.
+#
+# Separate from the Lab 00 stack on purpose: students bring litellm up, look at its logs, and
+# conclude it isn't enough. Keeping it its own compose project means `down` here doesn't touch
+# their Gravwell.
+#
+# Logs reach Gravwell via the docker SYSLOG LOGGING DRIVER, not a litellm callback. The original
+# workshop tried litellm's success_callback and it never worked cleanly; the syslog driver is
+# boring, vendor-neutral, and makes exactly the point we want (you get access logs, not content).
+#
+# REQUIRES the Lab 00 stack to be UP FIRST: the syslog driver connects at container start and
+# fails the container if nothing is listening on <ID>09.
+
+name: ${WORKSHOPUID}litellm
+
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: ${WORKSHOPUID}litellm
+    restart: unless-stopped
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "1"]
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY (source ~/.workshop_env)}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-workshop}
+    ports:
+      - "${WORKSHOPUID}00:4000"
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml:ro
+    logging:
+      driver: syslog
+      options:
+        # -> the raw-text listener on <ID>09 (config/simple_relay-litellm.conf), NOT the image's
+        # built-in rfc5424 syslog listeners. That listener doesn't parse, so whatever format the
+        # driver speaks lands as text and we skip the format question entirely.
+        syslog-address: "tcp://127.0.0.1:${WORKSHOPUID}09"
+        tag: "litellm"

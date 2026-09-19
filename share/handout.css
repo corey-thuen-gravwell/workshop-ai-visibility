@@ -1,0 +1,181 @@
+/* Handout stylesheet: the Gravwell 2026 deck look, adapted for reading and printing.
+ *
+ * Same family as slides/themes/gravwell/jarvis.template.css: Montserrat display face, gold/blue/
+ * orange accents, orange list markers, blue-ruled code blocks, orange-barred callouts.
+ * The one deliberate departure is the BODY: dark purple is right for a projector and wrong for a
+ * 200-line handout somebody reads for an hour or sends to a printer. So the title block carries
+ * the deck's dark art and the body is light.
+ *
+ * Rendered by share/build-handouts.sh (npx marked -> this CSS -> chromium --print-to-pdf).
+ */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&display=swap');
+
+:root {
+  /* lifted verbatim from the deck theme */
+  --gold:   #FED36B;
+  --blue:   #708EC8;
+  --orange: #ED561B;
+  --purple: #2b1a3f;
+  --display: "Montserrat", "Avenir Next", "Avenir", "Segoe UI", sans-serif;
+  --body: Arial, Helvetica, "Liberation Sans", sans-serif;
+
+  /* print-side palette: the deck's accents re-tuned for ink on white */
+  --ink:        #1c1526;
+  --ink-soft:   #4a4056;
+  --rule:       #d9d3e2;
+  --gold-ink:   #8a6a00;   /* gold is unreadable on white; this is its ink-safe sibling */
+  --blue-ink:   #3f5b96;
+  --code-bg:    #f6f4fa;
+  --panel:      #f4f1f8;
+}
+
+@page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+
+body {
+  font-family: var(--body);
+  font-size: 10.5pt;
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ---- title block: the only dark region, so a handout is recognisably from the deck family ---- */
+.titleblock {
+  background: var(--purple);
+  color: #fff;
+  /* padding must be >= the bleed below, or the text lands off the printable page */
+  padding: 20mm 16mm 11mm 16mm;
+  margin: -18mm -16mm 10mm -16mm;   /* bleed to the page edge */
+  border-bottom: 3px solid var(--orange);
+  position: relative;
+}
+.titleblock h1 {
+  font-family: var(--display); font-weight: 600; color: var(--gold);
+  font-size: 22pt; line-height: 1.12; margin: 0 0 2mm 0;
+}
+.titleblock .sub { font-family: var(--display); font-weight: 500; font-size: 11pt; color: #cbbfd6; margin: 0; }
+.titleblock .course {
+  font-family: var(--display); font-size: 7.5pt; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--blue); margin: 0 0 3mm 0;
+}
+/* the deck's orange corner bracket, top-right */
+.titleblock::after {
+  content: ""; position: absolute; top: 9mm; right: 8mm; width: 9mm; height: 9mm;
+  border-top: 2.5px solid var(--orange); border-right: 2.5px solid var(--orange);
+}
+
+/* Walkthrough variant: these carry every answer, so they must not look like a lab handout.
+   Orange title rather than gold, and a banner saying what it is. */
+.titleblock.walkthrough { background: #2a1410; border-bottom-color: var(--gold); }
+.titleblock.walkthrough h1 { color: #ffa06b; }
+.titleblock.walkthrough .course { color: #ff8a4c; }
+.titleblock.walkthrough::after { border-color: var(--gold); }
+.answerbanner {
+  background: #fff4ec; border: 1px solid #f0b489; border-left: 4px solid var(--orange);
+  border-radius: 0 4px 4px 0; padding: 3mm 4mm; margin: 0 0 6mm;
+  font-family: var(--display); font-size: 9.5pt; color: #7a3410;
+}
+
+/* ---------------------------------- body ---------------------------------- */
+h1, h2, h3, h4 { font-family: var(--display); letter-spacing: 0.01em; page-break-after: avoid; }
+h1 { font-size: 16pt; color: var(--ink); font-weight: 600; margin: 8mm 0 3mm; }
+h2 {
+  font-size: 13pt; color: var(--ink); font-weight: 600;
+  margin: 7mm 0 2.5mm; padding-bottom: 1.5mm; border-bottom: 2px solid var(--blue);
+}
+h3 { font-size: 11pt; color: var(--blue-ink); font-weight: 600; margin: 5mm 0 2mm; }
+h4 { font-size: 10pt; color: var(--ink-soft); font-weight: 600; margin: 4mm 0 1.5mm; }
+
+p { margin: 0 0 2.5mm; }
+a { color: var(--blue-ink); text-decoration: none; border-bottom: 1px solid #c3cee4; }
+strong { color: var(--gold-ink); font-weight: 700; }
+em { color: var(--ink-soft); }
+
+ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+li { margin: 0.8mm 0; }
+li::marker { color: var(--orange); }
+li > ul, li > ol { margin-top: 0.8mm; }
+
+/* task lists render as checkboxes in the checklist one-pager */
+input[type="checkbox"] { accent-color: var(--orange); margin-right: 1.5mm; }
+li:has(> input[type="checkbox"]) { list-style: none; margin-left: -5mm; }
+
+hr { border: 0; border-top: 1px solid var(--rule); margin: 6mm 0; }
+
+/* ---------------------------------- code ---------------------------------- */
+code {
+  font-family: "DejaVu Sans Mono", "Liberation Mono", Consolas, monospace;
+  font-size: 0.88em; background: var(--code-bg);
+  border: 1px solid var(--rule); border-radius: 3px; padding: 0.05em 0.3em;
+  color: #3d2f52;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--blue);
+  border-radius: 4px;
+  padding: 3mm 4mm;
+  margin: 0 0 3mm;
+  font-size: 7.5pt;             /* fits ~106 monospace chars across the A4 text width */
+  line-height: 1.4;
+  /* NEVER soft-wrap code. PDF viewers turn every visual wrap into a real newline on copy, so a
+     wrap inside a JSON string or a quoted argument breaks the pasted command. Lines must fit
+     instead: build-handouts.sh refuses to build any code line wider than MAX_CODE_WIDTH. */
+  white-space: pre;
+  overflow: hidden;
+  page-break-inside: avoid;
+}
+pre code { background: none; border: 0; padding: 0; font-size: inherit; color: var(--ink); }
+
+/* --------------------------------- callouts -------------------------------- */
+blockquote {
+  border-left: 3px solid var(--orange);
+  background: var(--panel);
+  margin: 0 0 3mm;
+  padding: 2.5mm 4mm;
+  border-radius: 0 4px 4px 0;
+  page-break-inside: avoid;
+}
+blockquote p:last-child { margin-bottom: 0; }
+
+/* --------------------------------- tables ---------------------------------- */
+table { border-collapse: collapse; width: 100%; margin: 0 0 4mm; font-size: 9pt; page-break-inside: avoid; }
+th, td { text-align: left; padding: 1.6mm 2.5mm; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--display); font-weight: 600; color: var(--ink); border-bottom: 2px solid var(--blue); }
+tbody tr:nth-child(even) { background: #faf9fc; }
+
+img { max-width: 100%; border: 1px solid var(--rule); border-radius: 3px; }
+
+/* ------------------------------ web twin (screen) --------------------------- *
+ * build-handouts.sh also writes each document as .html for the share site, with a Copy button on
+ * every code block. Same stylesheet; these rules only shape it for a browser window. Nothing here
+ * applies to the PDF (print media), and the button is hidden if someone prints the web page. */
+@media screen {
+  body.web { max-width: 860px; margin: 0 auto; padding: 0 20px 40px; font-size: 15px; }
+  body.web .titleblock { margin-top: 18px; }
+  body.web pre { font-size: 13px; overflow-x: auto; padding: 12px 14px; }
+  body.web code { font-size: 0.9em; }
+  body.web table { font-size: 14px; }
+  .webbar {
+    margin: 14px 0 0; padding: 8px 12px; font-family: var(--display); font-size: 13px;
+    color: var(--ink-soft); background: var(--panel); border-left: 3px solid var(--gold-ink); border-radius: 0 4px 4px 0;
+  }
+  .codeblock { position: relative; }
+  .codeblock .copy {
+    position: absolute; top: 6px; right: 6px; font-family: var(--display); font-size: 11px; font-weight: 600;
+    padding: 3px 9px; border: 1px solid var(--blue); border-radius: 3px; background: #fff; color: var(--blue-ink);
+    cursor: pointer; opacity: 0.85;
+  }
+  .codeblock .copy:hover { opacity: 1; background: var(--blue); color: #fff; }
+  .codeblock .copy.ok { background: var(--gold); border-color: var(--gold-ink); color: var(--ink); }
+}
+@media print { .webbar, .codeblock .copy { display: none !important; } }
+
+/* --------------------------------- footer ---------------------------------- */
+.footer {
+  margin-top: 10mm; padding-top: 3mm; border-top: 1px solid var(--rule);
+  font-family: var(--display); font-size: 7.5pt; color: var(--ink-soft);
+  display: flex; justify-content: space-between;
+}

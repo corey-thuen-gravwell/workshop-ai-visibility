@@ -1,0 +1,26 @@
+# Workshop share server: nginx serving live/ over HTTPS with basic auth.
+#
+# Everything it needs is a bind mount, so this is portable: point SHARE_ROOT and WORKSHOP_CERT_DIR
+# somewhere else and it runs anywhere docker does. Nothing is baked into an image.
+#
+# Brought up by instructor/runbook/scripts/start-share-server.sh, which also writes .htpasswd.
+#
+#   live/      is the web root, ONLY what an instructor has published
+#   staged/    is NOT mounted, so unpublished material is not merely hidden, it is unreachable
+
+name: workshopshare
+
+services:
+  share:
+    image: nginx:alpine
+    container_name: workshop-share
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${SHARE_ROOT:-/opt/workshop/share}/live:/srv/share:ro
+      - ${SHARE_CONF:-./nginx.conf}:/etc/nginx/conf.d/default.conf:ro
+      - ${SHARE_ROOT:-/opt/workshop/share}/.htpasswd:/etc/nginx/.htpasswd:ro
+      - ${WORKSHOP_CERT_DIR:-/opt/workshop/certs}/cert.pem:/certs/cert.pem:ro
+      - ${WORKSHOP_CERT_DIR:-/opt/workshop/certs}/key.pem:/certs/key.pem:ro

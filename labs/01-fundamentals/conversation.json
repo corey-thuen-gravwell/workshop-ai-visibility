@@ -1,0 +1,9 @@
+{
+  "model": "claude-haiku-4-5",
+  "max_tokens": 64,
+  "messages": [
+    {"role": "user", "content": "My favorite color is chartreuse. Reply with just: noted."},
+    {"role": "assistant", "content": "noted."},
+    {"role": "user", "content": "What is my favorite color?"}
+  ]
+}

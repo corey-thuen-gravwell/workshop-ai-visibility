@@ -1,0 +1,39 @@
+# litellm gateway: Lab 05 Part 1 (M8).
+#
+# The teaching point of this module is NOT that litellm is bad. It's that a *generic* gateway
+# logs like a load balancer: it proves a request happened, and tells you nothing about what was
+# in it. Keep this config minimal: the students' attention belongs on the logs, not the YAML.
+#
+# Routing: every alias below forwards to Anthropic using the class key from the environment.
+# The key never appears in this file.
+
+model_list:
+  # The alias students actually use. `model: claude` in any OpenAI-shaped client.
+  - model_name: claude
+    litellm_params:
+      model: anthropic/claude-opus-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # Cheap alias for smoke-testing / repeated runs during the lab.
+  - model_name: claude-fast
+    litellm_params:
+      model: anthropic/claude-haiku-4-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # Named explicitly so `curl .../v1/models` shows more than one row, students should see that
+  # the gateway advertises a routing table, which is the one genuinely useful thing it gives you.
+  - model_name: claude-sonnet
+    litellm_params:
+      model: anthropic/claude-sonnet-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+litellm_settings:
+  # Emit one access-log line per request to stdout, which the docker syslog driver ships to
+  # Gravwell. This is deliberately the *only* logging we configure (Lab 05 explains why).
+  set_verbose: false
+  json_logs: true
+
+general_settings:
+  # Clients must present this key to the gateway. The real provider key stays server-side:
+  # that's the "a proxy is also a key boundary" discussion point, and it comes back in M9.
+  master_key: os.environ/LITELLM_MASTER_KEY

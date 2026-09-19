@@ -1,0 +1,39 @@
+# A second worked example: a guard server with three tools that each fail differently.
+# Useful for seeing how a client reacts to a normal "failed check" versus a protocol error.
+
+[server]
+name = "pii-guard"
+version = "1.0.0"
+instructions = "Screen text for identifiers before it is stored or sent onward."
+
+[[tools]]
+name = "scan_for_identifiers"
+description = """
+Scan text for anything that looks like a government identifier, card number, or API key.
+Use before storing or transmitting user-supplied text. Returns a verdict and what matched.
+"""
+behavior = "regex_check"
+field = "text"
+pattern = "\\b(\\d{3}-\\d{2}-\\d{4}|\\d{16}|sk-[A-Za-z0-9]{8,})\\b"
+expect = "absent"
+pass_message = "CLEAN: no identifier-shaped strings found."
+
+[[tools]]
+name = "require_classification_banner"
+description = """
+Verify that a document carries a classification banner. Documents without one must not be
+published. Returns which required marking is missing.
+"""
+behavior = "required_words"
+field = "text"
+words = ["CLASSIFICATION:"]
+pass_message = "OK: classification banner present."
+
+[[tools]]
+name = "escalate_to_human"
+description = """
+Escalate a document to the human review queue. Call this when a scan fails and the user asks
+what to do next.
+"""
+behavior = "always_error"
+text = "The review queue is not reachable from this environment. A human must be contacted directly."

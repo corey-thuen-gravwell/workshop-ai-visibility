@@ -1,0 +1,38 @@
+# Secrets: NEVER commit real credentials
+.env
+*.key
+*-api-key.txt
+secrets/
+
+# Live Gravwell runtime state created by `docker compose up` (data shards + instance secrets +
+# certs). Persisted across up/down via the volume mount, but never committed. Authored, version-
+# tracked config lives in the repo as templates and is copied into ./gravwell/ at setup.
+labs/**/gravwell/
+gravstorage/
+gravconfig/certs/
+
+# Generated sample data (regenerate with src/log-generator). Commit a curated set deliberately.
+datasets/corelight/generated/
+datasets/corelight/generated-wrapped.json
+datasets/sysmon/generated/
+datasets/gravwell-ai-assistant/generated/
+datasets/shadow-ai-sources/generated/
+
+# Build artifacts
+src/**/dist/
+*.o
+# Compiled tool binaries are built from src/ at provisioning time
+bin/
+
+# Editor / OS cruft
+.DS_Store
+*.swp
+.idea/
+.vscode/
+__pycache__/
+
+# Generated lab data (regenerate with src/log-generator)
+
+# Credentials supplied per deployment (see SETUP.md)
+gravwell.license
+instructor/runbook/gravwell-llm.env
