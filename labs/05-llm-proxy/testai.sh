@@ -6,14 +6,16 @@
 # Usage:
 #   ./testai.sh                 # 4 prompts through the gateway
 #   N=10 ./testai.sh            # more traffic
-#   MODEL=claude-fast ./testai.sh
-#   PROXY=http://localhost:1290 ./testai.sh    # point at the Python proxy instead (Part 2b)
+#   LITELLM_MODEL=claude-fast ./testai.sh
+#   PROXY=http://localhost:${WORKSHOPUID}90 LITELLM_MASTER_KEY=hunter2 LITELLM_MODEL=claude-haiku-4-5 ./testai.sh
+#       # the Python proxy instead, after the Part 2b stretch gave it the real key and `--client-key hunter2`
 set -euo pipefail
 
 : "${WORKSHOPUID:?not set, run '. ~/.workshop_env' first}"
 PROXY="${PROXY:-http://localhost:${WORKSHOPUID}00}"
 KEY="${LITELLM_MASTER_KEY:-sk-workshop}"
-MODEL="${MODEL:-claude}"
+# Its own variable, not MODEL: a solo reader's ~/.workshop_env sets MODEL for Lab 01b's Ollama scripts.
+LITELLM_MODEL="${LITELLM_MODEL:-claude}"
 N="${N:-1}"
 
 PROMPTS=(
@@ -23,7 +25,7 @@ PROMPTS=(
     "What is the capital of Idaho? One word."
 )
 
-echo "==> ${PROXY}  model=${MODEL}  rounds=${N}"
+echo "==> ${PROXY}  model=${LITELLM_MODEL}  rounds=${N}"
 
 # The routing table is the one genuinely useful thing a generic gateway gives you.
 echo "--- models the gateway advertises:"
@@ -36,7 +38,7 @@ for round in $(seq 1 "$N"); do
         curl -sS "${PROXY}/v1/chat/completions" \
             -H "Authorization: Bearer ${KEY}" \
             -H 'content-type: application/json' \
-            -d "$(jq -n --arg m "$MODEL" --arg p "$p" \
+            -d "$(jq -n --arg m "$LITELLM_MODEL" --arg p "$p" \
                   '{model:$m, max_tokens:200, messages:[{role:"user",content:$p}]}')" \
             | { jq -r '.choices[0].message.content // .error.message // .' 2>/dev/null || cat; }
     done

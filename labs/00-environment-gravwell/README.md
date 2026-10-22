@@ -15,23 +15,31 @@ built from it**. If `$WORKSHOPUID` is `14`, then `${WORKSHOPUID}443` is `14443` 
 `${WORKSHOPUID}01` is `1401`. You can type `${WORKSHOPUID}443` literally; the shell substitutes it.
 
 ## Tasks
-1. SSH to `workshop<ID>@<lab-host>` (the instructor gives you the host name, your seat number and
-   your password). Working through this alone on your own machine? See `SETUP.md` at the repo root.
-2. Verify the environment: `echo $WORKSHOPUID`, `docker run --rm hello-world`.
-   If `$WORKSHOPUID` prints nothing, run `. ~/.workshop_env`.
+1. You are already on your seat from Lab 01 (`workshop<ID>@<lab-host>`; the instructor gave you
+   the host name, your seat number and your password). Working through this alone on your own
+   machine? See `SETUP.md` at the repo root.
+2. Verify the environment: `echo $WORKSHOPUID`, `docker run --rm hello-world` (the docker group,
+   which Lab 01 did not need). If `$WORKSHOPUID` prints nothing, run `. ~/.workshop_env`.
 3. Bring up Gravwell, **from the lab directory**, or docker has no compose file to read:
    ```bash
    cd ~/jarvis/labs/00-environment-gravwell
    docker compose up -d
    docker compose ps          # both containers should say Up
    ```
-4. Browse to `https://<lab-host>:${WORKSHOPUID}443` and log in with **`admin` /
-   `changeme`**. Open Query Studio and run:
+4. Browse to `https://<lab-host>:${WORKSHOPUID}443` (working alone: `https://localhost:<ID>443`
+   on the box, or through an SSH tunnel if it is remote; self-study guide section 3) and log in
+   with **`admin` / `changeme`**. Open Query Studio and run:
    ```
    tag=gravwell limit 20
    ```
    Your timeline is **not** empty, but everything in it is the SIEM logging about *itself*. No
-   security data arrives until Lab 02.
+   security data arrives until Lab 02. Ask it who is talking:
+   ```
+   tag=gravwell syslog Appname | count by Appname | sort by count desc | table Appname count
+   ```
+   Four names: the webserver, the indexer, the bundled relay that will take your `nc` ingests, and
+   the LLM ingester sidecar. That one line is the whole shape of every query in this course:
+   extract a field, aggregate it, render it.
 5. Mint the API token the rest of the course authenticates with, then load it into your shell:
    ```bash
    ./make-token.sh
@@ -68,16 +76,15 @@ have to make yourself at home.
 - **Config, license, and certs are layered in as read-only file-mounts** over the etc volume:
   - `config/https.conf` → HTTPS on 443
   - `config/simple_relay-corelight.conf` → the ingest listeners used in Lab 02
-  - `config/simple_relay-litellm.conf` → raw-text listener for litellm container logs (Lab 05)
-  - `config/simple_relay-shadowai-sources.conf` → osquery / SWG / CloudTrail / Workspace listeners
-    for the beyond-the-wire lab (`<ID>11`–`<ID>14`)
-  - `../../gravwell.license` → the Gravwell license (required, or nothing starts)
+  - one `config/simple_relay-*.conf` per later lab (the Python proxy, litellm, your own MCP server,
+    the beyond-the-wire sources, the Lab 07 flag); `config/README.md` lists them
+  - `../../gravwell.license` → the Gravwell license (required, or nothing works; solo, the
+    free-tier file from `SETUP.md` section 2)
   - `${WORKSHOP_CERT_DIR}/cert.pem` + `key.pem` → the TLS cert. On an instructor-run lab host that is
     `/opt/workshop/certs` (root-owned, shared); self-hosted falls back to `./config/`.
-- **Ports** derive from `WORKSHOPUID`: UI `${WORKSHOPUID}443` (HTTPS), litellm logs
-  `${WORKSHOPUID}09`, corelight ingest `${WORKSHOPUID}01`–`04`, Python-proxy ingest
-  `${WORKSHOPUID}05`, beyond-the-wire sources `${WORKSHOPUID}11`–`14`, LLM ingester
-  `${WORKSHOPUID}80` / `81`.
+- **Ports** derive from `WORKSHOPUID`: UI `${WORKSHOPUID}443` (HTTPS), ingest listeners
+  `${WORKSHOPUID}01`–`15` (one per data source; the compose comments say which is which), the LLM
+  ingester on `${WORKSHOPUID}80` / `81`.
 - **Ingest auth:** `GRAVWELL_INGEST_AUTH` (indexer) and `GRAVWELL_INGEST_SECRET` (the bundled
   `simple_relay`) must be set to the *same* value from `.env` (default `IngestSecrets`). Set only
   one and `simple_relay` cannot talk to its own indexer.
@@ -98,10 +105,16 @@ have to make yourself at home.
   parsing is the simpler and more robust choice.
 - The image serves the UI over **HTTPS on 443** only after the `https.conf` override + cert; its
   raw default is HTTP on `:80`.
+- **Scheduled searches** (Lab 07 Task 15) run through the search agent, which the image points at
+  the webserver's old `http://127.0.0.1:80`. The compose's `command:` rewrites that to `:443` at
+  start. A scheduled search whose **Last run** stays empty means it didn't:
+  `docker exec <ID>gravwell tail /opt/gravwell/log/searchagent.log`.
 - `simple_relay` benignly logs a few pipe-connect retries at startup until the indexer is up.
-- Env vars (`WORKSHOPUID`, `WORKSHOP_CERT_DIR`) come from `~/.workshop_env`, sourced by both
-  `.bashrc` and `.profile` so interactive **and** login shells get them. A fully non-interactive
-  `ssh host 'cmd'` sources neither: pass the values explicitly in scripts.
+- Env vars (`WORKSHOPUID`, `WORKSHOP_CERT_DIR`) come from `~/.workshop_env`, sourced from the top
+  of `.bashrc` and from `.profile` so interactive **and** login shells get them. A fully
+  non-interactive shell (`ssh host 'cmd'`, `bash -c`, cron) sources neither, and a line appended to
+  the *end* of Ubuntu's `.bashrc` never runs non-interactively: scripts do `. ~/.workshop_env`
+  themselves.
 - `permission denied … docker.sock` means your shell predates your docker group membership. Log
   out and back in.
 
@@ -116,7 +129,7 @@ That overwrites the lab's files with the working versions and leaves you exactly
 no branch switching, no detached HEAD, nothing else touched. Ask an instructor if you're unsure.
 
 ## Discussion
-- You are running a SIEM, an ingest listener set and an LLM proxy on one box, from one compose
+- You are running a SIEM, an ingest listener set and the LLM ingester on one box, from one compose
   file, in under a minute. What does that do to the argument that visibility work has to wait for
   a platform team?
 - `tag=gravwell` is the tool logging about itself. Which of your own security tools emit their own

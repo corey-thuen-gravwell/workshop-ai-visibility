@@ -188,10 +188,10 @@ This is the one I keep coming back to. No prompt manipulation, no clever model t
 ## What we are doing here
 
 - **First**, get visibility from the logs you *already have*: shadow AI in network logs (DNS / SSL / HTTP) and rogue agents in endpoint logs (Sysmon)
-- **Then** go active: LLM proxies, the Model Context Protocol, **your own MCP servers steering a real agent**, then turn all of it back into detections
+- **Then** go active: LLM proxies, the Model Context Protocol, **the malicious MCP server you build yourself**, then turn all of it back into detections
 
 You're the security team auditing a startup that vibe-codes everything. It builds `moneyprinter`. Your job isn't to build, it's to **see what the AI sends and what it does.**
 
 <!--
-By the end you'll have steered an agent across MCP servers with a config file you wrote, and caught it in your own telemetry. Enough slides: let's get you into the terminal.
+By the end you'll have built an MCP server that walks a planted secret out of your own Gravwell through the agent, and caught it in your own telemetry. Enough slides: let's get you into the terminal. First thing on the seat: echo $WORKSHOPUID; if it is empty, . ~/.workshop_env (Lab 01 has the box).
 -->

@@ -65,16 +65,17 @@ practice), and the full sequence doesn't fit in one sitting for two people.
 | # | Module | Lab | Budget | Notes |
 |---|---|---|---|---|
 | 1 | M2 | `01-fundamentals` | 60 (~25 lab) | **Start here.** Pure curl, no Gravwell |
-| 2 | Lab A | `00-environment-gravwell` | 60 | The one that decides whether the rest works |
+| 1b | M2b | `01b-demystifying-ai` | 45 | Needs the Lab 01b relay (or Ollama) up first |
+| 2 | Lab 00 | `00-environment-gravwell` | 60 | The one that decides whether the rest works |
 | 3 | M4 | `02-shadow-ai` | 75 | Longest analysis block |
 | 4 | M5 | `03-endpoint-sysmon` | 105 | Longest module in the course |
 | - | - | - | - | **break here** |
 | 5 | M7 | `04-opencode-config` | 60 | First real spend |
 | 6 | M8+M9 | `05-llm-proxy` | 135 | The hinge. Budget a whole session |
 | 7 | M10 | `06-mcp-deep-dive` | 105 | **Both parts**: Part 2 has him build his own MCP server and connect opencode to it |
+| 8 | M11 + M12 | `07-mcp-tool-interaction` | 105 | The thief and the detections. Watch whether the Student reads the loot before believing the agent's reply |
 
 Modules M0/M1/M3/M6/M13 are discussion: read the decks aloud for timing, don't dry-run them.
-Lab 07 (M11 + M12) is a seat lab like Lab 06; dry-run it the same way.
 
 ## What to record
 
@@ -141,7 +142,7 @@ Resolve each to a yes/no, fold the answers into the walkthrough, and drop its �
 Whatever's easiest to write: a text file, a doc, pasted notes. The most valuable parts, in order:
 
 1. **Every BLOCKER**, with the words/guiding that unstuck the Student.
-2. **Which handoff assertions failed** (H1–H7). These are cheap to fix and can only be found this
+2. **Which handoff assertions failed** (H1–H8). These are cheap to fix and can only be found this
    way.
 3. **Rough timings, for calibration only.** Note where you ran long, but don't optimise the run
    around the clock: the durations in `AGENDA.md` are unvalidated estimates and experienced

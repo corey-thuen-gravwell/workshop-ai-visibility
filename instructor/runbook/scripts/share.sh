@@ -31,8 +31,10 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="${SHARE_ROOT:-/opt/workshop/share}"
 STAGED="$ROOT/staged"; LIVE="$ROOT/live"
-# Public name of the lab host: SHARE_HOST or LAB_HOST in the environment, else LAB_HOST from .env.
-HOSTNAME_PUB="${SHARE_HOST:-${LAB_HOST:-$(sed -n 's/^LAB_HOST="\(.*\)"$/\1/p' /opt/workshop/.env 2>/dev/null)}}"
+# Public name of the share site: SHARE_HOST (environment, then .env), else share.<LAB_HOST>.
+HOSTNAME_PUB="${SHARE_HOST:-$(sed -n 's/^SHARE_HOST="\(.*\)"$/\1/p' /opt/workshop/.env 2>/dev/null)}"
+_lab="${LAB_HOST:-$(sed -n 's/^LAB_HOST="\(.*\)"$/\1/p' /opt/workshop/.env 2>/dev/null)}"
+HOSTNAME_PUB="${HOSTNAME_PUB:-${_lab:+share.$_lab}}"
 HOSTNAME_PUB="${HOSTNAME_PUB:-$(hostname -f)}"
 install -d -m 755 "$STAGED" "$LIVE" 2>/dev/null || true
 
@@ -142,6 +144,7 @@ case "${1:-status}" in
     refresh)    cmd_refresh ;;
     publish)    shift; cmd_move publish "$@" ;;
     unpublish)  shift; cmd_move unpublish "$@" ;;
-    url)        echo "https://$HOSTNAME_PUB/  (user: ${SHARE_USER:-workshop})" ;;
+    url)        _u="${SHARE_USER:-$(sed -n 's/^SHARE_USER="\(.*\)"$/\1/p' /opt/workshop/.env 2>/dev/null)}"
+                echo "https://$HOSTNAME_PUB/  (user: ${_u:-workshop})" ;;
     *)          sed -n '2,20p' "$0" | sed 's/^# \?//' ;;
 esac

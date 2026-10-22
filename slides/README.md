@@ -20,8 +20,8 @@ Matches the AGENDA modules, so slides track the labs:
 | `05-opencode-proxy.md` | M7–M9 opencode + proxies | 🟢 drafted (bridge) |
 | `05b-semantic-search.md` | P3 semantic search over LLM logs (padding; after M9 or M12). Embeddings recap, the two config halves, gotchas, a live-demo kick slide, and the measured results as backup slides | 🟢 drafted |
 | `06-mcp.md` | M10 MCP deep dive | 🟢 drafted |
-| `07-mcp-tool-interaction.md` | M11 MCP tool interaction across servers (Lab 07 Parts 1–2) | 🟢 drafted |
-| `08-detections.md` | M12 detections from the ingester's data (Lab 07 Part 3) | 🟢 drafted (bridge), repointed at `tag=llm` |
+| `07-mcp-tool-interaction.md` | M11 a malicious MCP server: the chain, the thief, the three places a sentence can hide (Lab 07 Parts 1–2) | 🟢 drafted |
+| `08-detections.md` | M12 detections from the ingester's data (Lab 07 Part 3: the theft in order, the canary) | 🟢 drafted (bridge), repointed at `tag=llm` |
 
 ## Build
 No local install needed (uses `npx`):

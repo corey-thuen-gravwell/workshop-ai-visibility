@@ -20,9 +20,10 @@ outside decide what you get:
 Every knob is visible in the request, because it's HTTP and JSON, same as Lab 01.
 
 ## Setup
-No Gravwell. The scripts talk to a model **Gravwell hosts for this class**, through a small relay
-on this machine at `http://127.0.0.1:9010` that adds the credential on the way out. You never see a
-token and never need one:
+No Gravwell. In a class the scripts talk to a model **Gravwell hosts**, through a small relay on
+this machine at `http://127.0.0.1:9010` that adds the credential on the way out; you never see a
+token and never need one. Working alone, `GRAVWELL_LLM_URL` points at your own Ollama instead
+(`SETUP.md` section 3) and the same scripts work unchanged:
 
 ```bash
 cd ~/jarvis/labs/01b-demystifying-ai
@@ -127,5 +128,6 @@ cd ~/jarvis && git checkout stage-demystify -- labs/01b-demystifying-ai
   you about the tool that sent it?
 - Everything you did here was against a model your own organization hosts. Same API shape as the
   vendor's. Which one would you rather have to audit, and why?
-- You never held a credential for that model. Something on `127.0.0.1:9010` did, and it decided
-  which paths you could reach. Remember that shape: you'll build it yourself in Lab 05.
+- In a class you never held a credential for that model. Something on `127.0.0.1:9010` did, and
+  it decided which paths you could reach. (Working alone, your Ollama needed none; the shape is the
+  same, with you as the relay.) Remember it: you'll build it yourself in Lab 05.

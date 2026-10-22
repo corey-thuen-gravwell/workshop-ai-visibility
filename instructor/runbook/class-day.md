@@ -13,6 +13,8 @@ places where the obvious command is the wrong one called out.
 > the development and self-guided default, not a classroom. Export the roster size once and every
 > command below picks it up:
 >
+> The attendee prerequisites promise the port ranges `10443-29443` and `39443`: moving the id
+> block or `SEMANTIC_UID` means re-sending that document to the network teams.
 > ```bash
 > export SEATS=20 START_ID=10      # ids 10-29
 > ```
@@ -83,7 +85,7 @@ last sync.
 deploy-share --rebuild
 ```
 
-Builds 31 PDFs + 31 HTML plus the decks, wipes `staged/` and re-ships. It refuses to ship anything
+Builds every handout and walkthrough as PDF and HTML plus the decks, wipes `staged/` and re-ships. It refuses to ship anything
 answer-shaped outside `walkthroughs/`, and refuses on a code line wider than 100 characters.
 
 ### Step 3 (host, as root) · regenerate the data and rebuild the student repo, released through Lab 01 only
@@ -137,7 +139,7 @@ Expected tail: `reset <SEATS> seats`, `<SEATS>/<SEATS> seats have a working ~/ja
 /opt/workshop/src/instructor/runbook/scripts/share.sh status
 ```
 
-Want `0 live · 75 staged and not yet released` and no walkthrough warning. This also clears any
+Want `0 live`, everything staged and not yet released, and no walkthrough warning. This also clears any
 orphaned files (finding 3).
 
 ### Step 6 · credentials: nothing to do
@@ -167,7 +169,9 @@ token, so do it before the room arrives or not at all.
 ```
 
 The deck (`slides/05b-semantic-search.md`) carries the measured results as backup slides, so P3
-still lands as a talk if you skip this.
+still lands as a talk if you skip this. Know what `up` does with the token: it goes into the demo
+containers' configs, and every seat is in the `docker` group, so for as long as the stack runs any
+seat can `docker exec` it out (`api-key-architecture.md`). Take it down after the demo.
 
 ---
 
@@ -236,7 +240,7 @@ Want a JSON model list.
 
 ```bash
 # the share site is up, asks for a password, and has nothing on it yet
-curl -s -o /dev/null -w '%{http_code}\n' https://<lab-host>/           # want 401
+curl -s -o /dev/null -w '%{http_code}\n' https://share.<lab-host>/     # want 401
 /opt/workshop/src/instructor/runbook/scripts/share.sh url
 ```
 
@@ -259,13 +263,14 @@ files, and it warns you when you try.
 |---|---|---|
 | **Lab 01 starts (M2)** | `share publish labs/01-fundamentals html` | Already in their clone; this only puts the page up. **The one lab whose page you publish by hand**, because it was released at build time |
 | Lab 01b (M2b) | `release --next` | `stage-demystify` + `labs/01b-demystifying-ai.html` |
-| Lab 00 / Lab A | `release --next` | `stage-gravwell` + `labs/00-environment.html` |
+| Lab 00 | `release --next` | `stage-gravwell` + `labs/00-environment.html` |
 | Lab 02 (M4) | `release --next` | `stage-shadowai` + `labs/02-shadow-ai.html` |
 | *P9, if you run it* | `release --next` | `stage-shadowai-sources` + `labs/p9-shadow-ai-sources.html` |
 | Lab 03 (M5) | `release --next` | `stage-sysmon` + `labs/03-endpoint-sysmon.html` |
 | Lab 04 (M7) | `release --next` | `stage-opencode` + `labs/04-opencode-config.html` |
 | Lab 05, both parts (M8 + M9) | `release --next` | `stage-llm-proxy` + `labs/05-llm-proxy.html` and `labs/p8-ai-assistant-audit.html`. One release for the whole lab: litellm, `testai.sh`, the reference captures, P8 and `src/logging-proxy` |
 | Lab 06 (M10) | `release --next` | `stage-mcp` + `labs/06-mcp-deep-dive.html` |
+| Lab 07 (M11 + M12) | `release --next` | `stage-mcp-tools` + `labs/07-mcp-tool-interaction.html`. One release for both modules: the flag, the attacker's starter is already in `stage-mcp` |
 
 `release` on its own prints the status board: green `●` released, yellow `→` next.
 
@@ -390,7 +395,8 @@ Then, in this order:
 
 1. **Revoke the Anthropic key.** It is short-lived by design; make that true.
 2. **Rotate the Gravwell LLM token** in `instructor/runbook/gravwell-llm.env` (git-ignored) and
-   `start-llm-relay.sh restart`.
+   `start-llm-relay.sh restart`. If the P3 demo ran, `enable-semantic.sh down` first: its containers
+   hold the old token in their configs.
 3. `reset-seats.sh`, or `rmuser.sh` if the host is going away.
 4. Record what actually happened, especially anything that failed in front of the room, and fold
    it into the walkthroughs' failure tables and make an issue on our public repo. That is what makes the next delivery better.

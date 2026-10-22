@@ -146,4 +146,4 @@ The client now exposes `search_logs` as a callable tool. **The description is in
 # Next: Lab 06, MCP deep dive
 ## Part 1: speak MCP by hand to your own Gravwell · Part 2: write a server and let an agent use it
 
-<!-- Hand-off to Lab 06 (Lab G). Part 1 is curl and JSON-RPC against the seat's own Gravwell MCP server: initialize, tools/list, whoami, one real call. Part 2 is a server from a TOML config, wired into opencode, and the tool-description experiments. After the lab: Lab 07 (tool interaction across servers), whose Part 3 turns what happened into detections. -->
+<!-- Hand-off to Lab 06. Part 1 is curl and JSON-RPC against the seat's own Gravwell MCP server: initialize, tools/list, whoami, one real call. Part 2 is a server from a TOML config, wired into opencode, and the tool-description experiments. After the lab: Lab 07 (the malicious server: plant a flag, build the thief), whose Part 3 turns what happened into detections. -->

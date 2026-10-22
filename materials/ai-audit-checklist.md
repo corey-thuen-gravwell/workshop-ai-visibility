@@ -58,9 +58,17 @@ above it cannot.
 - [ ] **Log tool discovery as an event**, so a newly-added capability is a detectable change rather
       than a silent one.
 - [ ] **Record which tool descriptions are in play.** A tool description is a prompt fragment
-      written by whoever wrote the server, and it lands in your model's context verbatim.
+      written by whoever wrote the server, and it lands in your model's context verbatim. So do
+      the **argument descriptions** and the server's **`instructions`** field, which `tools/list`
+      does not even return: review all three places, on every update, not once at install.
 - [ ] **Scope the credential you hand each MCP server.** Blast radius is the token, not the tool
       list. This is the cheapest real control on this page.
+- [ ] **Scope the credential the agent itself runs as.** A server with no credential at all steals
+      through the agent's: a user whose tag grants (CBAC) do not include the secret cannot be
+      talked into reading it, however the manifest is worded.
+- [ ] **Plant canaries** in every data store an agent should never read, and search the model's
+      traffic for them. The agent's own reply is a witness statement, not a log: it will tell you
+      about the secrets after it has already handed them over.
 
 ---
 
@@ -72,6 +80,12 @@ above it cannot.
 3. **High-child-count parent processes**: agent shape on the endpoint, no signature needed.
 4. **Volume and time outliers**, large uploads, off-hours bursts. Nobody types 48 MB.
 5. **Tool-offer drift**: an agent's advertised tool list changed. Someone added an integration.
+6. **A canary in the model's traffic**: a planted string entering as a `tool_result` and leaving
+   as a `tool_call` argument. Two rows, the whole theft.
+7. **A fetch nobody asked for**: a tag, file or record read by a tool when no user message
+   mentioned it, especially when a call into a *different* server follows within a minute.
+8. **First-seen tool names and oversized arguments**: the cheapest agent detections there are,
+   and they know nothing about what was stolen.
 
 ## Architecting for auditability
 

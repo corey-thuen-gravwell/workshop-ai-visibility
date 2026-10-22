@@ -10,7 +10,7 @@ header: 'Exploring AI Visibility · Gravwell tour'
 ## A quick tour of the tool we're using to analyze data
 
 <!--
-M4b. Runs right after Lab 02, before M5/Lab C. Deliberately a debrief, not a
+M4b. Runs right after Lab 02, before M5/Lab 03. Deliberately a debrief, not a
 lecture: by now they have typed json, lookup (vectored), count by, stats, compound queries, regex, eval,
 uploaded resources, installed a kit and fought the time picker, all by feel. This hour names what
 they did and shows the rest of the room. Instructors are Gravwell experts: the middle of this deck
@@ -46,7 +46,7 @@ a query, Logbot is a fine way out; say so, then send them back to typing.
 - So the question you have not thought of yet is still answerable
 - Want OCSF, CIM, etc? Transform in the query AND keep the original.
 
-<!-- The ingest-time-normalisation point from Lab 02's detour, stated once more in the abstract. Lab 03 is about to hit them with xml and Data[Name]== syntax; this is the setup. -->
+<!-- The ingest-time-normalisation point from Lab 02's detour, stated once more in the abstract. Lab 03 is about to hit them with winlog (and shows xml once, as the general tool); this is the setup. -->
 
 ---
 
@@ -143,7 +143,7 @@ automate it. The live browser tour that follows walks these same slides in the U
 - The **Corelight kit** and the **LLM Observability kit** are both from **kits.gravwell.io**
 - Install asks you for the **configuration macros** (your tag names). Build and export your own from the same page
 
-<!-- Resource first because they built one in Lab 02 (table -save, then lookup -r). Kits second because they installed one. Neither is abstract by this point. -->
+<!-- Resource first because they uploaded one in Lab 02 (AI_DOMAINS) and used a temporary one (the @ai_resolved compound query; table -save is the persistent form). Kits second because they installed one. Neither is abstract by this point. -->
 
 ---
 
@@ -213,4 +213,4 @@ The docs are open. Vendors who gate tech docs are shitheads.
 # Back to the labs
 ## Next: find a rogue agent in Sysmon data
 
-<!-- Hand-off to M5 / Lab C. The first module they cannot guess is xml with Data[Name]==; they have just seen where the docs for it live. -->
+<!-- Hand-off to M5 / Lab 03. The first module they cannot guess is winlog (the handout shows xml once so they know the general form exists); they have just seen where the docs for it live. -->

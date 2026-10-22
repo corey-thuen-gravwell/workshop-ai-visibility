@@ -2,7 +2,7 @@
 set -uo pipefail
 cd ~ && . ~/.workshop_env
 GW="https://localhost:${WORKSHOPUID}443"
-ok(){ printf '  ✅ %s\n' "$*"; }; bad(){ printf '  ❌ %s\n' "$*"; }
+NBAD=0; ok(){ printf '  ✅ %s\n' "$*"; }; bad(){ NBAD=$((NBAD+1)); printf '  ❌ %s\n' "$*"; }
 chk(){ # label, actual, expected(substring)
   case "$2" in *"$3"*) ok "$1: $2";; *) bad "$1: got [$2] want [$3]";; esac; }
 gwq(){ python3 - "$1" "$GWAUTH" "$GW" <<'PY'
@@ -49,6 +49,10 @@ chk "compose ps Up x2" "$(docker compose ps --format '{{.Status}}' | grep -c Up)
 [ "$(gwq 'tag=gravwell limit 20 | table TIMESTAMP DATA' | tail -n +2 | wc -l)" -ge 1 ] && ok "tag=gravwell has rows" || bad "tag=gravwell empty"
 chk "/api/mcp initialize" "$(curl -sk -o /dev/null -w '%{http_code}' -X POST $GW/api/mcp -H "$GWAUTH" -H 'content-type: application/json' -H 'accept: application/json, text/event-stream' -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","clientInfo":{"name":"e2e","version":"1.0"},"capabilities":{}}}')" "200"
 [ "$(docker exec ${WORKSHOPUID}llm grep -ci "gone hot" /opt/gravwell/log/llm_ingester.log)" -ge 1 ] && ok "ingester hot ($(docker exec ${WORKSHOPUID}llm grep -ci "starting listener" /opt/gravwell/log/llm_ingester.log) listeners)" || bad "ingester not hot"
+# Every count below is for ONE ingestion of the fixtures. A stack that already holds lab data
+# (manual labs, an earlier pass) doubles them all, so refuse rather than print 20 red herrings.
+pre=$(gwq 'tag=corelight_conn count | table count' | tail -1)
+case "$pre" in ""|0|count) ok "pristine stack: no corelight_conn rows yet";; *) bad "stack already holds $pre corelight_conn rows; the counts need a fresh stack: cd ~/jarvis/labs/00-environment-gravwell && docker compose down -v, then rerun"; echo "## pass1: $NBAD failed check(s)"; exit 2;; esac
 echo "################ LAB 02"
 cd ~/jarvis/datasets/corelight/generated; for f in dns:01 ssl:02 conn:03 http:04; do nc -q1 localhost ${WORKSHOPUID}${f#*:} < corelight_${f%%:*}.jsonl; done; nc -q1 localhost ${WORKSHOPUID}06 < okta_access.jsonl
 cd ~/jarvis; ./labs/02-shadow-ai/upload-resource.sh AI_DOMAINS datasets/resources/ai_domains.txt >/dev/null && ./labs/02-shadow-ai/upload-resource.sh AI_DOMAINS_PLUS_API datasets/resources/ai_domains_plus_api.txt >/dev/null && ok "resources uploaded"; sleep 12
@@ -74,12 +78,20 @@ chk "task4 passwd read" "$(gwq 'tag=sysmon winlog EventID == 1 ParentProcessId =
 chk "task5 rule one row" "$(gwq 'tag=sysmon winlog EventID == 1 Image ~ bash ParentProcessId | count by ParentProcessId | eval count > 10 | table ParentProcessId count' | tail -n +2 | tr '\n' ' ')" "3565,73"
 sw=$(gwq 'tag=sysmon winlog EventID == 1 ParentProcessId == 3565 | stats min(TIMESTAMP) as first max(TIMESTAMP) as last count | table first last count' | tail -1); chk "task6 sysmon window 109" "$sw" ",109"; echo "     sysmon window:  $sw"
 echo "-- Sysmon kit (API stand-in for the UI clicks)"; H="$GWAUTH"
-for i in 1 2 3; do RUUID=$(curl -sk -m 60 $GW/api/kits/remote/list -H "$H" | jq -r '.[] | select(.ID=="io.gravwell.windows.sysmon") | .UUID' 2>/dev/null); [ -n "$RUUID" ] && break; sleep 5; done; curl -sk -X POST $GW/api/kits -H "$H" -F "remote=$RUUID" -o /tmp/sk28.json; UUID=$(jq -r .UUID /tmp/sk28.json)
-curl -sk -X PUT "$GW/api/kits/$UUID" -H "$H" -H content-type:application/json -d '{"OverwriteExisting":true,"Global":true}' -o /dev/null
-for i in $(seq 1 30); do st=$(curl -sk $GW/api/kits -H "$H" | jq -r ".[] | select(.UUID==\"$UUID\") | .Installed"); [ "$st" = true ] && break; sleep 4; done; chk "kit installed" "$st" "true"
-Q=$(python3 -c "import json;print([e['Query'] for e in json.load(open('/dev/stdin')) if e.get('Name')=='Sysmon: Top 100 Parent Processes'][0])" < <(curl -sk $GW/api/library -H "$H"))
+for i in 1 2 3; do RUUID=$(curl -sk -m 60 $GW/api/kits/remote/list -H "$H" | jq -r '.[] | select(.ID=="io.gravwell.windows.sysmon") | .UUID' 2>/dev/null); [ -n "$RUUID" ] && break; sleep 5; done; curl -sk -X POST $GW/api/kits -H "$H" -F "remote=$RUUID" -o /tmp/sk28.json; UUID=$(jq -r '.UUID // empty' /tmp/sk28.json 2>/dev/null)
+if [ -z "$UUID" ]; then st=""; bad "kit staging failed (remote=[$RUUID]): $(head -c 160 /tmp/sk28.json | tr -d '\n')"   # e.g. {"Error":"Newer version of bundle is already installed"} on a non-pristine stack
+else
+  curl -sk -X PUT "$GW/api/kits/$UUID" -H "$H" -H content-type:application/json -d '{"OverwriteExisting":true,"Global":true}' -o /dev/null
+  for i in $(seq 1 30); do st=$(curl -sk $GW/api/kits -H "$H" | jq -r ".[] | select(.UUID==\"$UUID\") | .Installed"); [ "$st" = true ] && break; sleep 4; done
+fi; chk "kit installed" "$st" "true"
+Q=$(python3 -c "import json;print([e['Query'] for e in json.load(open('/dev/stdin')) if e.get('Name','').replace(' - ',': ')=='Sysmon: Top 100 Parent Processes'][0])  # the kit renamed 'Sysmon: X' to 'Sysmon - X' (v7)" < <(curl -sk $GW/api/library -H "$H"))
 chk "kit query empty before macro fix" "$(gwq "$Q" | tail -n +2 | wc -l)" "0"
 MID=$(curl -sk $GW/api/macros -H "$H" | jq -r '.[] | select(.Name=="PROVIDER") | .ID'); M=$(curl -sk $GW/api/macros -H "$H" | jq -c '.[] | select(.Name=="PROVIDER") | .Expansion = "Provider==\"Linux-Sysmon\""'); curl -sk -X PUT "$GW/api/macros/$MID" -H "$H" -H content-type:application/json -d "$M" -o /dev/null
 chk "kit query after macro fix" "$(gwq "$Q" | sed -n 2p)" "-,553"
-echo "-- checkpoint"; cd ~/jarvis && echo garbage > labs/03-endpoint-sysmon/README.md && git checkout stage-sysmon -- labs/03-endpoint-sysmon && chk "checkpoint restore clean" "[$(git status --short)]" "[]"
+echo "-- checkpoint"; cd ~/jarvis && cp labs/03-endpoint-sysmon/README.md /tmp/e2e-lab03-README.md && echo garbage > labs/03-endpoint-sysmon/README.md
+# The handout's line uses the classroom stage tag; a solo clone has no tags and the guide says HEAD.
+if git rev-parse -q --verify stage-sysmon >/dev/null 2>&1; then git checkout stage-sysmon -- labs/03-endpoint-sysmon; else echo "     (no stage-sysmon tag here, restoring from HEAD as the self-study guide says)"; git checkout HEAD -- labs/03-endpoint-sysmon; fi
+chk "checkpoint restore clean" "[$(git status --short labs/03-endpoint-sysmon)]" "[]"
+cmp -s /tmp/e2e-lab03-README.md labs/03-endpoint-sysmon/README.md || { cp /tmp/e2e-lab03-README.md labs/03-endpoint-sysmon/README.md; bad "checkpoint restore changed the Lab 03 README; original put back"; }; rm -f /tmp/e2e-lab03-README.md
 echo "(stack left up for part 2)"
+echo "## pass1: $NBAD failed check(s)"; exit $(( NBAD > 0 ))

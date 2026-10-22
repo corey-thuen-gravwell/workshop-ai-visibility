@@ -1,5 +1,5 @@
 # Shadow-AI detection matrix
-### *Exploring AI Visibility*: take-home one-pager (M4 / Lab B, extended by the "beyond the wire" lab)
+### *Exploring AI Visibility*: take-home one-pager (M4 / Lab 02, extended by the "beyond the wire" lab)
 
 Shadow AI is not one thing. It is a person in a browser, an agent in a terminal, a model on a
 laptop, a workload in a cloud account, and a SaaS integration that reads your files server-to-server,

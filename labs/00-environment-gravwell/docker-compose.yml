@@ -4,13 +4,14 @@
 #  - NAMED VOLUMES for etc+storage: clean persistence across up/down, initialized from the image,
 #    no root-owned-files-in-home problems. (Bind-mounting /opt/gravwell/etc fights the image.)
 #  - Authored config + license + certs layered in as read-only FILE MOUNTS over the etc volume.
-#  - HTTPS on 443 via the https.conf drop-in + mounted cert/key.
+#  - HTTPS on 443 via the https.conf drop-in + mounted cert/key. The search agent is re-pointed at
+#    443 by the service's `command` (see there), or no scheduled search ever runs.
 #  - Ingest via simple_relay listeners (simple_relay-corelight.conf) -> `nc` each JSONL file.
 #  - Ingest auth: GRAVWELL_INGEST_AUTH (indexer) and GRAVWELL_INGEST_SECRET (bundled simple_relay)
 #    MUST be the same value: set only one and simple_relay cannot reach its own indexer. The
 #    llm-ingester sidecar uses the same secret over the compose network (gravwell:4023, not published).
 #
-# Ports derive from WORKSHOPUID: UI <ID>443, syslog <ID>514, ingest listeners <ID>01..14 (corelight dns/ssl/conn/http, proxy, okta, sysmon, logbot, litellm, mcp, osquery, swg, cloudtrail, gws),
+# Ports derive from WORKSHOPUID: UI <ID>443, syslog <ID>514, ingest listeners <ID>01..15 (corelight dns/ssl/conn/http, proxy, okta, sysmon, logbot, litellm, mcp, osquery, swg, cloudtrail, gws, flag),
 # LLM ingester <ID>80 (OpenAI-compatible) and <ID>81 (Anthropic Messages).
 
 name: ${WORKSHOPUID}
@@ -26,6 +27,15 @@ services:
     environment:
       GRAVWELL_INGEST_AUTH: ${GRAVWELL_INGEST_SECRET:-IngestSecrets}
       GRAVWELL_INGEST_SECRET: ${GRAVWELL_INGEST_SECRET:-IngestSecrets}
+    # The image ships searchagent.conf with Webserver-Address=127.0.0.1:80 + Insecure-Use-HTTP=true,
+    # and https.conf below moves the webserver to HTTPS on 443. Nothing else re-points the agent, so
+    # every scheduled search (Lab 07 Task 15, the self-study capstone) sits at LastRun=never and
+    # searchagent.log repeats "Could not acquire a client". The GRAVWELL_WEBSERVER_ADDRESS env
+    # override only applies to settings ABSENT from the file, hence the in-place rewrite: it runs on
+    # every start, is idempotent, and the etc volume keeps the result. Search-Agent-Auth stays
+    # commented out in the file, so the image's GRAVWELL_SEARCHAGENT_AUTH default still applies;
+    # Insecure-Skip-TLS-Verify=true is already in the shipped file (self-signed certs are fine).
+    command: ["sh", "-c", "sed -i 's/^Webserver-Address=.*/Webserver-Address=127.0.0.1:443/; s/^Insecure-Use-HTTP=.*/Insecure-Use-HTTP=false/' /opt/gravwell/etc/searchagent.conf && exec /opt/gravwell/bin/manager"]
     ports:
       - "${WORKSHOPUID}443:443"           # web UI (HTTPS)
       - "${WORKSHOPUID}514:514/udp"       # syslog UDP, image default listener (unused by the labs)
@@ -43,6 +53,7 @@ services:
       - "${WORKSHOPUID}12:7712"           # ingest: secure web gateway access log (beyond the wire) -> tag=swg
       - "${WORKSHOPUID}13:7713"           # ingest: AWS CloudTrail (beyond the wire) -> tag=cloudtrail
       - "${WORKSHOPUID}14:7714"           # ingest: Google Workspace token audit (beyond the wire) -> tag=gws
+      - "${WORKSHOPUID}15:7715"           # ingest: the Lab 07 flag, the secrets an agent must never be handed -> tag=flag
     volumes:
       - gwetc:/opt/gravwell/etc
       - gwstorage:/opt/gravwell/storage
@@ -52,6 +63,7 @@ services:
       - ./config/simple_relay-litellm.conf:/opt/gravwell/etc/simple_relay.conf.d/litellm.conf:ro
       - ./config/simple_relay-mcp.conf:/opt/gravwell/etc/simple_relay.conf.d/mcp.conf:ro
       - ./config/simple_relay-shadowai-sources.conf:/opt/gravwell/etc/simple_relay.conf.d/shadowai-sources.conf:ro
+      - ./config/simple_relay-flag.conf:/opt/gravwell/etc/simple_relay.conf.d/flag.conf:ro
       - ../../gravwell.license:/opt/gravwell/etc/license:ro
       # Let's Encrypt cert. On the lab host WORKSHOP_CERT_DIR=/opt/workshop/certs (one shared,
       # root-owned copy: the docker daemon mounts it, seat users can't read the private key).

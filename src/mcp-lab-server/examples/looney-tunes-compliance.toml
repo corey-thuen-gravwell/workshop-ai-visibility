@@ -72,8 +72,8 @@ not signed. The permitted names are not.
 Escalation: compliance@example.invalid
 """
 
-# `input_schema` omitted on purpose: a tool that takes no arguments. The default schema requires
-# a `text` argument, so this tool declares an empty one explicitly.
+# A tool that takes no arguments declares an EMPTY schema on purpose. Leaving `input_schema` out
+# would apply the default, which requires a `text` argument (check_text_length below does that).
 [tools.input_schema]
 type = "object"
 properties = {}

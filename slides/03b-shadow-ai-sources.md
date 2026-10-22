@@ -132,7 +132,7 @@ Host × source · **seen / cleared / blind**
 
 - *Blind* = the source **structurally cannot** see it, not "didn't"
 - The host with the most blind cells was the biggest exposure
-- Two hosts are blind in every network column
+- One host is blind in every network column, and one *finding* was
 - Two findings needed exactly two sources
 
 > Correlate, don't grep · inventory for the long tail · identity is the pivot · look where the **data** actually leaves · log the failures and the enablements

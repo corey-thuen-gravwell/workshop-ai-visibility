@@ -174,8 +174,10 @@ touched: a release only ever adds files.
 | `labs/03-endpoint-sysmon/` | Finding a rogue agent on the endpoint |
 | `labs/04-opencode-config/` | Being the AI user, and auditing it |
 | `labs/05-llm-proxy/` | LLM proxies: seeing what was actually said |
-| `labs/06-mcp-deep-dive/` | Speaking MCP by hand |
+| `labs/06-mcp-deep-dive/` | Speaking MCP by hand, then writing your own server |
+| `labs/07-mcp-tool-interaction/` | A malicious MCP server, and how to catch it |
 | `labs/_stretch/shadow-ai-sources/` | *Optional:* shadow AI beyond the wire, the same hosts as Lab 02, four more logs |
+| `labs/_stretch/ai-assistant-audit/` | *Optional:* audit an AI assistant from its own logs |
 
 ## Your seat
 
@@ -215,7 +217,12 @@ dependencies, that logs prompts, tool calls and token usage from any OpenAI- or
 Anthropic-compatible client into any SIEM. It is the smallest useful thing you can take back to
 work on Monday.
 EOF
-sed -i "s|__SHARE_URL__|https://${LAB_HOST:-$(hostname -f)}/|" "$STAGE/README.md"   # LAB_HOST from the environment or /opt/workshop/.env
+# The share site's name: SHARE_HOST (environment, then /opt/workshop/.env), else share.<LAB_HOST>.
+_env=/opt/workshop/.env
+share_host="${SHARE_HOST:-$(sed -n 's/^SHARE_HOST="\(.*\)"$/\1/p' "$_env" 2>/dev/null)}"
+_lab="${LAB_HOST:-$(sed -n 's/^LAB_HOST="\(.*\)"$/\1/p' "$_env" 2>/dev/null)}"
+share_host="${share_host:-${_lab:+share.$_lab}}"
+sed -i "s|__SHARE_URL__|https://${share_host:-$(hostname -f)}/|" "$STAGE/README.md"
 printf '__pycache__/\n*.pyc\n.env\nsession.json\ntools.json\nproxy.jsonl\n' > "$STAGE/.gitignore"
 }
 
@@ -273,6 +280,12 @@ assert_absent() {  # [-F] pattern, human description   (-F = fixed string, not a
 assert_absent "Expected answers (instructor)"   "instructor answer sections"
 assert_absent "sk-ant-api"                      "Anthropic API keys"
 assert_absent "answer-key"                      "answer-key references"
+assert_absent "BEGIN [A-Z ]*PRIVATE KEY"        "private keys (a self-signed key.pem in labs/00 config would ship to every seat)"
+# The per-delivery passwords from /opt/workshop/.env must not be in any shipped file either.
+for var in SHARE_PASSWORD WORKSHOP_USER_PASSWORD; do
+    val=$(sed -n "s/^$var=\"\{0,1\}\([^\"]*\).*/\1/p" "${ENV_FILE:-/opt/workshop/.env}" 2>/dev/null | head -1)
+    if [ "${#val}" -ge 6 ]; then assert_absent -F "$val" "$var value"; fi
+done
 # Lab 01b: the Gravwell LLM token lives only in the root-owned relay on the host, never in a shipped
 # file. Read the real value from the committed instructor file and make sure it isn't in the stage.
 llm_tok=$(sed -n 's/^LLM_UPSTREAM_TOKEN="\(.*\)"$/\1/p' "$REPO/instructor/runbook/gravwell-llm.env" 2>/dev/null || true)

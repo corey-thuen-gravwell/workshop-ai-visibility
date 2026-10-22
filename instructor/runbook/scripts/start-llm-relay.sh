@@ -78,7 +78,7 @@ set +e
 code_ok=$(curl -sS -o /dev/null -w '%{http_code}' -m 20 "http://$LISTEN/api/tags")
 code_gen=$(curl -sS -o /dev/null -w '%{http_code}' -m 60 "http://$LISTEN/api/generate" \
     -H 'content-type: application/json' \
-    -d '{"model":"logbot","prompt":"Reply OK","stream":false,"think":false,"options":{"num_predict":2}}')
+    -d "{\"model\":\"${MODEL:-logbot}\",\"prompt\":\"Reply OK\",\"stream\":false,\"think\":false,\"options\":{\"num_predict\":2}}")
 code_bad=$(curl -sS -o /dev/null -w '%{http_code}' -m 10 "http://$LISTEN/api/version")
 bound=$(ss -ltnH "sport = :${LISTEN##*:}" 2>/dev/null | awk '{print $4}' | tr '\n' ' ')
 perm=$(stat -c '%U:%a' "$RELAY_ENV")

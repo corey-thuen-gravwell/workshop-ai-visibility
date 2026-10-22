@@ -43,15 +43,12 @@ Wants=network-online.target
 [Service]
 Type=simple
 EnvironmentFile=$ENV_FILE
-ExecStart=/usr/bin/python3 $PROXY \\
-    --listen $LISTEN \\
-    --upstream $UPSTREAM \\
-    --upstream-key \${ANTHROPIC_API_KEY} \\
-    --client-key \${WORKSHOP_TOKEN} \\
-    --log-file $LOG
+# The proxy reads PROXY_UPSTREAM_KEY / PROXY_CLIENT_KEY from its environment. They are mapped from
+# the .env names inside a shell that exec's the proxy, so the key never appears in argv:
+# /proc/<pid>/cmdline is world-readable on a shared host, a process's environment is not.
+ExecStart=/bin/sh -c 'PROXY_UPSTREAM_KEY="\$ANTHROPIC_API_KEY" PROXY_CLIENT_KEY="\$WORKSHOP_TOKEN" exec /usr/bin/python3 $PROXY --listen $LISTEN --upstream $UPSTREAM --log-file $LOG'
 Restart=always
 RestartSec=3
-# The key is only ever in this process's argv and environment, both root-only.
 User=root
 Group=root
 

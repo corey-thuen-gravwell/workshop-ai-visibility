@@ -3,7 +3,7 @@
 > ⛔ **INSTRUCTOR ONLY.** Contains every answer. Student handout:
 > [`labs/04-opencode-config/README.md`](../../labs/04-opencode-config/README.md).
 
-**Module:** M7 + Lab D · **Budget:** 60 min · **Checkpoint:** `stage-opencode` · **Flex:** 🔒 core
+**Module:** M7 + Lab 04 · **Budget:** 60 min · **Checkpoint:** `stage-opencode` · **Flex:** 🔒 core
 **Deck:** [`slides/05-opencode-proxy.md`](../../slides/05-opencode-proxy.md) (opening section)
 
 ---
@@ -158,7 +158,7 @@ Tables that matter: `session` (19 rows on the test machine), `message` (606), `p
 
 *Beat: this is the module's turn:* "Twenty minutes ago you decided the client tells you nothing.
 It told you **everything**: including a dollar figure the vendor dashboard won't break out per
-session. So why are we building a proxy tomorrow?"
+session. So why are we building a proxy in Lab 05?"
 
 Let the room argue. Steer, don't lecture.
 

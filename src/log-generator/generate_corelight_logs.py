@@ -375,6 +375,8 @@ def main():
     ap.add_argument("--sysmon-in", help="real Sysmon XML to re-time onto the rogue-agent window")
     ap.add_argument("--sysmon-out", help="where to write the re-timed Sysmon XML")
     a = ap.parse_args(); random.seed(a.seed)
+    if bool(a.sysmon_in) != bool(a.sysmon_out):
+        ap.error("--sysmon-in and --sysmon-out go together: one without the other silently re-times nothing")
     end = datetime.now(timezone.utc) if a.anchor == "now" else datetime.fromisoformat(a.anchor.replace("Z", "+00:00"))
     w = World(end).build()
     os.makedirs(a.outdir, exist_ok=True)

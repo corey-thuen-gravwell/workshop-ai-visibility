@@ -1,7 +1,14 @@
 # Gravwell stack config (mounted into the container)
 
 - `https.conf`: serves the UI over HTTPS on 443 (drop-in for `gravwell.conf.d`). Committed.
+  The search agent inside the image still expects the webserver on `http://127.0.0.1:80`, so the
+  compose's `command:` rewrites `searchagent.conf` to `127.0.0.1:443` over HTTPS at every start.
+  Without that, scheduled searches are accepted and never run. Check:
+  `docker exec <ID>gravwell grep Webserver-Address /opt/gravwell/etc/searchagent.conf`.
 - `simple_relay-corelight.conf`: per-tag ingest listeners for the shadow-AI data. Committed.
+- `simple_relay-proxy.conf`, `-litellm.conf`, `-mcp.conf`, `-shadowai-sources.conf`, `-flag.conf`: one
+  listener per later lab (the Python proxy, litellm, the student's MCP server, the beyond-the-wire
+  sources, the Lab 07 flag). Each file says which lab feeds it. Committed.
 - `cert.pem` / `key.pem`: TLS cert + private key. **Never committed** (git-ignored).
 
 ## Where the cert comes from
@@ -18,9 +25,10 @@ the lab host is disposable, so there is no renewal.
 back to `./config/`. Drop your own `cert.pem`/`key.pem` here, or generate a self-signed pair:
 
 ```bash
-docker run --rm -v "$PWD":/out gravwell/gravwell:latest \
-  /opt/gravwell/bin/gencert -host localhost -cert-file /out/cert.pem -key-file /out/key.pem
+openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
+    -keyout key.pem -out cert.pem -subj "/CN=localhost" \
+    -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"     # the recipe in SETUP.md section 4
 ```
 
 The Gravwell license is mounted from `../../gravwell.license` (repo root, git-ignored; `SETUP.md`
-explains where to get one).
+section 2 explains the free-tier file and where to get a Community Edition one).

@@ -5,9 +5,12 @@
 # Usage:  ./rmuser.sh            SEATS=5 START_ID=30 ./rmuser.sh
 set -uo pipefail
 
-SEATS="${SEATS:-2}"
-START_ID="${START_ID:-10}"
-END_ID="${END_ID:-$((START_ID + SEATS - 1))}"
+ENV_FILE="${ENV_FILE:-/opt/workshop/.env}"
+# The operator's SEATS/START_ID/END_ID win; otherwise the class size comes from $ENV_FILE (as in
+# makeuser.sh); otherwise 2 seats from id 10.
+_cli_seats="${SEATS:-}"; _cli_start="${START_ID:-}"; _cli_end="${END_ID:-}"
+[ -f "$ENV_FILE" ] && { set -a; . "$ENV_FILE" 2>/dev/null; set +a; }
+SEATS="${_cli_seats:-${SEATS:-2}}"; START_ID="${_cli_start:-${START_ID:-10}}"; END_ID="${_cli_end:-${END_ID:-$((START_ID + SEATS - 1))}}"
 
 for i in $(seq "$START_ID" "$END_ID"); do
     USERNAME="workshop$i"

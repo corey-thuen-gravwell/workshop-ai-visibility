@@ -137,7 +137,7 @@ class World:
         t = self.at(10, 50)
         self.osq_row(t, "ubuntu-sysmon", "npm_packages", {"name": "opencode-ai", "version": "1.18.25", "directory": "/usr/local/lib/node_modules"})
         self.osq_row(t, "ubuntu-sysmon", "processes", {"pid": "3565", "name": "opencode", "path": "/usr/local/bin/opencode", "cmdline": "opencode run", "uid": "1000"})
-        self.note(BY_NAME["10.13.42.42"] if "10.13.42.42" in BY_NAME else "10.13.42.42", "osquery", "opencode installed and running (PID 3565, the Lab 03 agent).")
+        self.note(BY_NAME["ubuntu-sysmon"], "osquery", "opencode installed and running (PID 3565, the Lab 03 agent).")
         # --- fin-lt-112 / rdiaz: Copilot app (sanctioned)
         self.osq_row(self.at(8, 30), "fin-lt-112", "programs", {"name": "Microsoft 365 Copilot", "version": "1.24.1"})
         self.note(BY_NAME["fin-lt-112"], "osquery", "Microsoft 365 Copilot app, sanctioned.")

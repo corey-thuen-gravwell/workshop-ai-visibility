@@ -10,34 +10,34 @@ real seat user. The Lab 00 docker compose reflects this design.
 2. `issue-cert.sh step1` → add the TXT record → `issue-cert.sh step2`, Let's Encrypt, manual DNS-01.
 3. `build-student-repo.sh`: generates `/opt/gitsrv/jarvis.git` from an allowlist + 
    `student-repo/checkpoints.yaml`. Regenerates lab data, strips instructor answers, asserts no
-   leaks, tags 8 checkpoints, and verifies a fresh clone is non-empty before declaring success.
+   leaks, tags one checkpoint per stage in `checkpoints.yaml`, and verifies a fresh clone is non-empty before declaring success.
    **Run it before `makeuser.sh`**: the clone step needs the bare repo to exist.
 4. `makeuser.sh`: seats. **Default 2 seats, ids 10–11** (`SEATS`, `START_ID`): the development
    and self-guided default; a delivery runs `SEATS=20 ./makeuser.sh`. Reads `/opt/workshop/.env`,
    and what you pass on the command line wins over what that file says.
-5. `start-share-server.sh`: the share site (nginx in docker, HTTPS + basic auth on 80/443).
+5. `start-share-server.sh`: the share site (nginx in docker behind the host's Traefik at
+   `https://share.<lab-host>/`, basic auth; Traefik owns 80/443 and the cert).
    Then, from the authoring box, `deploy-share.sh` ships the built PDFs into `staged/`. During the
    class an instructor releases them with `share.sh publish …`; **`staged/` is never served**, so
    unreleased material is unreachable rather than merely unlisted.
 6. `preflight.sh`: read-only day-of checklist (host, secrets, cert, images, repo, seats, ports).
 7. `rmuser.sh`: teardown by seat range (compose project label = `WORKSHOPUID`).
 
-## Seat provisioning (`makeuser.sh`): works, with fixes (now applied in the script)
+## Seat provisioning (`makeuser.sh`): validated state
 
-Created `workshop11` cleanly (docker group, env vars, git config). Apply these fixes to the script:
+A seat is a Linux user in the `docker` group with `~/.workshop_env`, the instructor's
+`authorized_keys`, a git identity, and a clone of the served student repo. Four things the script
+does because the first delivery needed them:
 
-1. **Install `authorized_keys`** (script doesn't; needed for instructor/automation SSH):
-   ```bash
-   install -d -m 700 -o "$USERNAME" -g "$USERNAME" "$USER_HOME/.ssh"
-   cp /root/.ssh/authorized_keys "$USER_HOME/.ssh/authorized_keys"
-   chown "$USERNAME:$USERNAME" "$USER_HOME/.ssh/authorized_keys"; chmod 600 "$USER_HOME/.ssh/authorized_keys"
-   ```
-2. **Env vars load only in interactive shells.** `export …` appended to `~/.bashrc` is skipped by
-   the Ubuntu non-interactive early-return, so `ssh user@host 'cmd'` and `bash -lc` see empty values.
-   Fine for students (interactive), but scripted steps must set `WORKSHOPUID` explicitly.
-3. **Clone step** needs `/opt/gitsrv/jarvis.git`: run `build-student-repo.sh` first, or seats get
+1. **It installs `authorized_keys`** from root's, so instructor automation (the e2e passes,
+   `seat-survey.sh`) can reach every seat over SSH.
+2. **`~/.workshop_env` is sourced from `.bashrc` and the scripts also source it themselves.**
+   `export …` lines in `.bashrc` are skipped by Ubuntu's non-interactive early return, so
+   `ssh user@host 'cmd'` sees nothing; anything scripted sets or sources what it needs.
+3. **It needs `/opt/gitsrv/jarvis.git` to exist**: run `build-student-repo.sh` first, or seats get
    no `~/jarvis` and every handout path fails.
-4. **Rotate + de-hardcode** the `ANTHROPIC_API_KEY` (move to env/secret).
+4. **The Anthropic key comes from `/opt/workshop/.env`**, never from the script, and is rotated
+   per delivery (`api-key-architecture.md`).
 
 ## Gravwell in docker: the validated design (in Lab 00's compose)
 
@@ -68,12 +68,14 @@ No `reimport`/`oneshot` tool ships; ingest is via `gravwell_simple_relay` with a
 Students ingest each per-tag JSONL file:
 
 ```bash
-nc localhost ${WORKSHOPUID}01 < corelight_dns.jsonl    # + 02/ssl, 03/conn, 04/http
+nc -q1 localhost ${WORKSHOPUID}01 < corelight_dns.jsonl    # + 02/ssl, 03/conn, 04/http
 ```
 
-**Validated:** after `nc`, `GET /api/tags` (Bearer JWT from `POST /api/login`) returns
-`corelight_dns`, `corelight_ssl`, `corelight_conn`, `corelight_http`. `Ignore-Timestamps=true` gives
-current-time ingest (search "last 15 min"), matching the pre-flight checklist.
+**Validated:** after `nc`, `GET /api/tags` (with the seat's `Gravwell-Token`, as every script
+authenticates now) returns `corelight_dns`, `corelight_ssl`, `corelight_conn`, `corelight_http`.
+The Corelight listeners extract each record's own timestamp, so the data sits in the previous UTC
+business day and the handouts say "last 48 hours"; only the listeners that receive live streams
+(litellm, the MCP server, the Lab 07 flag) use `Ignore-Timestamps=true`.
 
 ## LLM-ingester sidecar (M9): validated locally
 

@@ -32,6 +32,8 @@ The story only makes sense when you line them up:
 ## What to alert on
 
 - **Unknown / unexpected tools** appearing in `tag=llm`: a tool name you have never seen, or one server's tool called right after another's
+- **A canary string** in the model's traffic: plant one in every tag no agent should read, alert when it shows up in a tool result or a tool call
+- **A fetch nobody asked for**: a tag, file or record read by a tool that the user's own words never mentioned
 - **Excessive tool use** or a silent agent loop
 - **Wildcard / recon** file access (`cat /etc/passwd`, SSH keys)
 - **Large or odd uploads**: data leaving that shouldn't
@@ -45,13 +47,30 @@ The story only makes sense when you line them up:
 
 Turn the behavior into a detection:
 
-- An agent calling a tool from a **server the user never asked about**, in `tag=llm` (Lab 07 Part 3)
-- Correlate it with the prompt and the tool result that led to it
-- Fire a webhook / SIEM notification when the pattern matches
+- The theft you just ran, in `tag=llm` (Lab 07 Part 3): a Gravwell fetch of a tag the user never mentioned, followed within a minute by a call into another server carrying what came back
+- The canary: `FLAG{` entering the model in a tool result, leaving in a tool call
+- Correlate it with the prompt, then fire a webhook / SIEM notification when the pattern matches
 
-> The lab traffic is your test case: if your rule catches it, it works.
+> The lab traffic is your test case: you know exactly what was stolen and when. If your rule catches it, it works.
 
-<!-- Lab 07 Part 3: write the detection against the tag=llm traffic the room just produced in Parts 1 and 2. You know the answer, so it's ideal test data. Keep it framed as detection, not attack construction. -->
+<!-- Lab 07 Part 3: write the detection against the tag=llm traffic the room just produced in Parts 1 and 2. They know the answer (five flags, two sessions), so it is ideal test data. The server's own log cannot do this: the real attacker's log goes to the attacker. -->
+
+---
+
+## Each alert, and the task that builds it
+
+| Alert on | Lab 07 Part 3 | The query's spine |
+|---|---|---|
+| A canary in the model's traffic | Task 12 | `regex "(?P<flag>FLAG\{…\})"` over `tag=llm` |
+| A fetch nobody asked for | Task 11 | compound query: `request.user_message` vs `response.tool_call` |
+| Sessions that crossed servers | Task 9 | `unique_count(server)` by `session_id` |
+| A tool seen for the first time, an oversized argument | Task 13 | `min(TIMESTAMP)` by `tool_name`; `length` |
+| The chain in order | Task 10 | `sort by TIMESTAMP`, two rows side by side |
+| High bash-spawn parents | Lab 03 Task 5 | Sysmon, not re-run here |
+
+> The endpoint layer is Lab 03's rule. Part 3 is the model's traffic; correlating the two is the take-home.
+
+<!-- One slide so the "what to alert on" list is not abstract: every bullet is a query they will have run within the hour, except the Sysmon one, which they ran in Lab 03. Say out loud that Part 3 never touches the endpoint; the three-layer correlation is the architecture, not the lab. -->
 
 ---
 

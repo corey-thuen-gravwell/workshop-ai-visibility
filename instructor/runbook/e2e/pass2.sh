@@ -2,7 +2,7 @@
 set -uo pipefail
 cd ~ && . ~/.workshop_env
 GW="https://localhost:${WORKSHOPUID}443"
-ok(){ printf '  ✅ %s\n' "$*"; }; bad(){ printf '  ❌ %s\n' "$*"; }
+NBAD=0; ok(){ printf '  ✅ %s\n' "$*"; }; bad(){ NBAD=$((NBAD+1)); printf '  ❌ %s\n' "$*"; }
 chk(){ case "$2" in *"$3"*) ok "$1: $2";; *) bad "$1: got [$2] want [$3]";; esac; }
 GRAVWELL_TOKEN="${GRAVWELL_TOKEN:-$(cat ~/.gravwell_token)}"; GWAUTH="Gravwell-Token: $GRAVWELL_TOKEN"
 gwq(){ python3 - "$1" "$GWAUTH" "$GW" <<'PY'
@@ -75,8 +75,9 @@ sed -i "s|localhost:${WORKSHOPUID}81/v1|localhost:${WORKSHOPUID}90/v1|" ~/moneyp
 cd ~/moneyprinter; timeout 300 opencode run "Read pricing.py and tell me the bulk threshold. One sentence." < /dev/null 2>&1 | tail -1 | cut -c1-100 | sed 's/^/     /'; sleep 6
 chk "proxy.jsonl tools_offered = 10" "$(jq -c 'select(.event_type=="request.tools_offered") | (.tool_names|length)' ~/proxy.jsonl | head -1)" "10"
 chk "tag=proxy tools_offered in Gravwell" "$(gwq 'tag=proxy json event_type | grep -e event_type request.tools_offered | count | table count' | tail -1 | awk '$1>0{print "yes"}')" "yes"
-echo "-- stretch: gateway mode"; setsid ~/jarvis/src/logging-proxy/llm_audit_proxy.py --listen 127.0.0.1:${WORKSHOPUID}92 --upstream https://api.anthropic.com --upstream-key "$ANTHROPIC_API_KEY" --client-key hunter2 --log-file ~/proxy-gw.jsonl > ~/proxy-gw.out 2>&1 < /dev/null & sleep 3
+echo "-- stretch: gateway mode"; PROXY_UPSTREAM_KEY="$ANTHROPIC_API_KEY" setsid ~/jarvis/src/logging-proxy/llm_audit_proxy.py --listen 127.0.0.1:${WORKSHOPUID}92 --upstream https://api.anthropic.com --client-key hunter2 --log-file ~/proxy-gw.jsonl > ~/proxy-gw.out 2>&1 < /dev/null & sleep 3
 chk "client key accepted" "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:${WORKSHOPUID}92/v1/messages -H 'x-api-key: hunter2' -H 'anthropic-version: 2023-06-01' -H 'content-type: application/json' -d '{"model":"claude-haiku-4-5","max_tokens":8,"messages":[{"role":"user","content":"hi"}]}')" "200"
 chk "wrong key refused" "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:${WORKSHOPUID}92/v1/messages -H 'x-api-key: wrong' -H 'anthropic-version: 2023-06-01' -H 'content-type: application/json' -d '{"model":"claude-haiku-4-5","max_tokens":8,"messages":[{"role":"user","content":"hi"}]}')" "401"
 chk "real key never logged" "$(cat ~/proxy.jsonl ~/proxy-gw.jsonl | grep -c "${ANTHROPIC_API_KEY:0:20}")" "0"
 echo "(stack + proxies left up for part 3)"
+echo "## pass2: $NBAD failed check(s)"; exit $(( NBAD > 0 ))

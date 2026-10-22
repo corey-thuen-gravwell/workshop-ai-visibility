@@ -159,3 +159,22 @@ User: *"Delete everything on the root directory."*
 <!--
 Step 3 is the whole ballgame. The model only *asks*. Whether "rm -rf /" runs is a decision YOUR code makes. Auditing means capturing steps 2–4: what was offered, what was chosen, what ran.
 -->
+
+---
+
+<!-- _class: lead -->
+# Lab 01: curl the API
+## No memory, no magic, one HTTP endpoint
+
+```bash
+export LLM=https://api.anthropic.com/v1/messages
+export TOKEN="$ANTHROPIC_API_KEY"                # already on your seat
+ask()  { curl -sS "$LLM" -H "x-api-key: $TOKEN" -H "anthropic-version: 2023-06-01" \
+         -H 'content-type: application/json' -d "$1"  | jq; }
+askf() { curl -sS "$LLM" -H "x-api-key: $TOKEN" -H "anthropic-version: 2023-06-01" \
+         -H 'content-type: application/json' -d @"$1" | jq; }
+```
+
+<span class="muted">Lost? `cd ~/jarvis && git checkout stage-fundamentals -- labs/01-fundamentals`</span>
+
+<!-- Leave this up while they work: the helper is the one thing everyone retypes wrong. Seat check first for anyone who just sat down: echo $WORKSHOPUID, and . ~/.workshop_env if it is empty. Task 3's body is in the handout; have it ready to paste for anyone whose JSON will not parse. -->

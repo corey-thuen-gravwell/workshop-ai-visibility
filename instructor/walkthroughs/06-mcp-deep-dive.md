@@ -3,7 +3,7 @@
 > ⛔ **INSTRUCTOR ONLY.** Contains every answer. Student handout:
 > [`labs/06-mcp-deep-dive/README.md`](../../labs/06-mcp-deep-dive/README.md).
 
-**Module:** M10 + Lab G · **Budget:** ~105 min (Part 1 ≈60, Part 2 ≈45) · **Checkpoint:** none
+**Module:** M10 + Lab 06 · **Budget:** ~105 min (Part 1 ≈60, Part 2 ≈45) · **Checkpoint:** `stage-mcp`
 **Flex:** ⏱ compressible · **Deck:** [`slides/06-mcp.md`](../../slides/06-mcp.md)
 
 > **Scope.** M10 is the *protocol*. What a manifest can make a model do across *several* servers,
@@ -235,7 +235,7 @@ has read that description too.
 ## Task 6: run the worked example
 
 The handout now walks the three messages again against the lab server, with its own `lab()` helper
-(the Setup `mcp()` helper bakes in Gravwell's URL, bearer token and `$SID`, and students who reuse
+(the Setup `mcp()` helper bakes in Gravwell's URL, the `Gravwell-Token` header and `$SID`, and students who reuse
 it get Gravwell's answers or a connection error and do not know why). Expected:
 
 | Step | Expected |
@@ -269,7 +269,7 @@ That is the honest answer, and it is the setup for Lab 07.
 
 | Symptom | Cause |
 |---|---|
-| `✗ failed` in `mcp mcp list` | Absolute paths: `command` needs full paths for both the script and the config. `~` is not expanded |
+| `✗ failed` in `opencode mcp list` | Absolute paths: `command` needs full paths for both the script and the config. `~` is not expanded |
 | Connected, but the tool is never called | The description is too vague, or the prompt doesn't sound like the described situation. This is task 8's lesson arriving early, lean into it |
 | Server appears to hang | Something is printing to **stdout**, which corrupts the JSON-RPC stream. Only protocol messages may go there; the server sends diagnostics to stderr |
 | Tool list is stale after an edit | Clients cache from `initialize`. Restart the server **and** opencode |
@@ -356,8 +356,8 @@ tag=mcp json method message | grep -e method tools/call | table message
 > towards: a tool description from a server you did not write is **untrusted input that reaches
 > the model as instructions**, on every turn, with no review step and no signature. Task 8 proved
 > you can steer an agent by editing one config file; a server author can do the same thing to
-> *your* agent, and can write rules about what to do with other servers' tools (Lab 07 shows
-> the model obeying exactly that kind of rule). Treat an MCP server's manifest the way you treat
+> *your* agent, and can write rules about what to do with other servers' tools (Lab 07 has the
+> reader build exactly that server and watch the model walk a planted secret out of Gravwell). Treat an MCP server's manifest the way you treat
 > a browser extension's permissions: inventory it, diff it on change, and log `tools/list`
 > results as events so you can answer "what was this agent told it could do, on that day?"
 
@@ -371,7 +371,7 @@ tag=mcp json method message | grep -e method tools/call | table message
 | Client identity check | **None.** The server believes `clientInfo` |
 | Bad-argument result | Schema validation error; `additionalProperties: false` |
 | `whoami` | `Admin: true`, tools run as the token's identity, bounded by CBAC |
-| Checkpoint | None. Keep `tools.json` |
+| Checkpoint | `stage-mcp` restores the handout and the lab server; keep `tools.json` and `~/my-server.toml`, they live outside the repo |
 
 ## Where students get stuck
 

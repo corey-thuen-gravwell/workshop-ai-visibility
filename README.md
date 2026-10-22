@@ -23,8 +23,8 @@ The course runs two ways, from the same material:
    process data (Sysmon), and the sources beyond the wire (inventory, proxies, cloud audit).
 3. How to see the content: an agent's own local logs, a generic LLM gateway, and content-capturing
    proxies that record prompts, tool calls and usage.
-4. How MCP servers steer an agent through tool descriptions, and how to detect that in the
-   proxy's data.
+4. How an MCP server steers an agent through its manifest, how a malicious one steals data through
+   the agent with no credential and no exploit, and how to detect that in the proxy's data.
 
 ## Layout
 
@@ -52,14 +52,15 @@ The course runs two ways, from the same material:
 You play a security team auditing AI activity. A startup "vibe-codes" a product (`moneyprinter`)
 with AI agents; the security team must gain visibility into what those agents send to providers
 and what actions they take. First from logs they already have, then with active interception,
-ending with a lab where the tool manifests you write steer an agent across MCP servers, and with
-turning the lessons into detections.
+ending with a lab where you build the MCP server an attacker would publish, watch it walk a planted
+secret out of Gravwell through the agent, and turn what you saw into detections.
 
 ## Requirements
 
 - **Self-guided:** a Linux machine or VM with docker, `jq`, `nc`, Python 3 and git; an Anthropic
-  API key with a spend limit; a Gravwell Community Edition license; optionally Ollama for the
-  demystification lab. `SETUP.md` covers all of it.
+  API key with a spend limit; a Gravwell license file (the built-in free tier needs no sign-up:
+  one line in `SETUP.md`); optionally Ollama for the demystification lab. `SETUP.md` covers all
+  of it.
 - **Instructor-led:** a lab host reachable by attendees on TCP 22, 443 and the per-seat HTTPS
   range; see `instructor/runbook/README.md`, and send `materials/attendee-prerequisites.md` to
   attendees weeks ahead so corporate network exceptions are in place.
@@ -71,8 +72,8 @@ and one laptop serves one reader.
 ## Credentials
 
 No credentials are committed to this repository. Copy `.env.example` to `.env` and fill it in;
-put your Gravwell license at the repo root as `gravwell.license`. Both paths are git-ignored.
-`SETUP.md` walks through obtaining each one.
+put your Gravwell license at the repo root as `gravwell.license` (working alone, the free-tier
+file from `SETUP.md` section 2). Both paths are git-ignored. `SETUP.md` walks through each one.
 
 ## Reference
 

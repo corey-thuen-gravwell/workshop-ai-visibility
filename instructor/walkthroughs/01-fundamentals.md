@@ -3,7 +3,7 @@
 > ⛔ **INSTRUCTOR ONLY.** Contains every answer. Student handout:
 > [`labs/01-fundamentals/README.md`](../../labs/01-fundamentals/README.md).
 
-**Module:** M2 · **Budget:** 60 min (≈35 lecture + ≈25 mini-lab) · **Checkpoint:** none
+**Module:** M2 · **Budget:** 60 min (≈35 lecture + ≈25 mini-lab) · **Checkpoint:** `stage-fundamentals`
 **Flex:** 🔒 core, never cut · **Deck:** [`slides/01-fundamentals.md`](../../slides/01-fundamentals.md)
 
 Everything else in the course is a corollary of this module. Shadow AI is findable because it's
@@ -36,7 +36,7 @@ slide, and have a copy-pasteable version in the handout (it's there).
 - `jq` installed (pre-flight checks it).
 - Seats already have `ANTHROPIC_API_KEY` in `~/.workshop_env`; the handout uses `$ANTHROPIC_API_KEY`
   so nobody has to be told a value.
-- **No Gravwell required.** M2 runs before Lab A. Don't let anyone start docker yet.
+- **No Gravwell required.** M2 runs before Lab 00. Don't let anyone start docker yet.
 
 > **Nothing is capturing this.** These requests go straight to Anthropic and leave no trace you
 > control: which is exactly the point to make at the end of M2. *"You just sent five prompts to a
@@ -195,7 +195,7 @@ Ask, don't tell. Each maps to a later module:
    in the handout exists for this; make sure everyone pastes it before Task 1.
 2. **`jq` missing or output too wide.** `| jq '.usage'` narrows it. Pre-flight checks for `jq`.
 3. **Building the multi-turn array by hand** (Tasks 3–4). Expect malformed JSON. Have the full
-   Task 3 body on a slide to copy.
+   Task 3 body ready to paste from the handout (the Lab 01 slide's notes say so).
 4. **`max_tokens` is required** on this API: omitting it is a 400, not a default.
 5. **Assuming `content[0]` is always text.** In Task 5 it's `[text, tool_use]`. That's why the
    handout has them list `content` *types*, not index blindly.

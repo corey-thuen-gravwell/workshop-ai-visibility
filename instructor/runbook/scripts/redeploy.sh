@@ -18,6 +18,10 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 HOST="${HOST:-jarvis}"
+# Seat range. Whatever is set here travels to the host (the host-side scripts fall back to
+# /opt/workshop/.env, then to 2 seats from id 10). An unset range used to mean "2 seats" on the
+# host whatever the class size, which updated two seats in place and stranded the rest.
+SEAT_ENV=""; for v in SEATS START_ID END_ID; do [ -n "${!v:-}" ] && SEAT_ENV+="$v=${!v} "; done   # empty when none set (a bare "= " used to run as a command)
 SEATS_MODE=fix; DOCS=1; REGEN=""
 for a in "$@"; do case "$a" in
     --reset-seats) SEATS_MODE=reset ;; --no-seats) SEATS_MODE=none ;; --no-docs) DOCS=0 ;; --regen) REGEN=1 ;;
@@ -27,7 +31,15 @@ esac; done
 step() { printf '\n\033[1;35m▶ %s\033[0m\n' "$*"; }
 
 step "1/4 sync authoring repo -> $HOST:/opt/workshop/src"
-"$HERE/sync-repo.sh" | tail -2
+sync_log="$(mktemp)"; "$HERE/sync-repo.sh" | tee "$sync_log" | tail -2
+# A running seat stack does not pick up a changed compose or listener config on its own: the
+# container keeps the old inode of a bind-mounted file, and `up -d` sees nothing to recreate.
+if grep -qE '^\s*[>.*c<]\S* +labs/00-environment-gravwell/' "$sync_log"; then
+    printf '\n\033[1;33m  Lab 00 compose/config changed. Seats with a running stack need, as the seat user:\n'
+    printf '    cd ~/jarvis/labs/00-environment-gravwell && docker compose up -d --force-recreate gravwell\n'
+    printf '  (preflight.sh checks for stale stacks; reset-seats.sh recreates them)\033[0m\n'
+fi
+rm -f "$sync_log"
 
 if [ "$DOCS" = 1 ]; then
     step "2/4 rebuild handouts + decks, ship to staged/, refresh what is live"
@@ -41,11 +53,15 @@ step "3/4 rebuild the student repo on $HOST (keeps the released stage$([ -n "$RE
 SKIP="SKIP_GENERATE=1"; [ -n "$REGEN" ] && SKIP=""
 ssh "$HOST" "cd / && $SKIP /opt/workshop/src/instructor/runbook/scripts/build-student-repo.sh" 2>&1 \
     | grep -E "Regenerating|SKIP_GENERATE|released|verified|FATAL|LEAK|NOTE|stage-.*\(\+" || true
+# A failed build (leak assertion, add-only violation, missing license) must stop here: step 4 would
+# otherwise move every seat onto whatever half-built history is on the host and print "done".
+[ "${PIPESTATUS[0]}" -eq 0 ] || { printf '\n\033[1;31mbuild-student-repo.sh failed on %s; seats left untouched\033[0m\n' "$HOST" >&2; exit 1; }
 
 case "$SEATS_MODE" in
   fix)
     step "4/4 update seats in place (keeps student edits)"
-    ssh "$HOST" 'set -u; S="${SEATS:-2}"; B="${START_ID:-10}"; ok=0; bad=""
+    ssh "$HOST" "$SEAT_ENV"' set -u; [ -f /opt/workshop/.env ] && { S=$(sed -n "s/^SEATS=\"\{0,1\}\([0-9]*\).*/\1/p" /opt/workshop/.env); B=$(sed -n "s/^START_ID=\"\{0,1\}\([0-9]*\).*/\1/p" /opt/workshop/.env); }
+      S="${SEATS:-${S:-2}}"; B="${START_ID:-${B:-10}}"; ok=0; bad=""
       for i in $(seq "$B" $((B+S-1))); do u=workshop$i; h=/home/$u/jarvis; [ -d "$h/.git" ] || continue
         if sudo -u "$u" bash -c "cd $h && git fetch -q --tags --force origin && git reset -q --keep origin/main" 2>/dev/null; then ok=$((ok+1)); else bad="$bad $u"; fi
       done
@@ -53,7 +69,7 @@ case "$SEATS_MODE" in
       [ -z "$bad" ] || echo "  NEEDS A LOOK (local edit collides with your change):$bad   -> reset-seats.sh for just that seat, or resolve by hand"' ;;
   reset)
     step "4/4 wipe + re-clone every seat (--reset-seats)"
-    ssh "$HOST" "/opt/workshop/src/instructor/runbook/scripts/reset-seats.sh" | tail -2 ;;
+    ssh "$HOST" "$SEAT_ENV /opt/workshop/src/instructor/runbook/scripts/reset-seats.sh" | tail -2 ;;
   none)
     step "4/4 seats left alone (--no-seats): they cannot pull until you run redeploy.sh again without it, or reset-seats.sh" ;;
 esac

@@ -13,7 +13,7 @@ weight: M10 is twice M3, and the labs are where the time actually goes.
 
 **Narrative arc:** *get visibility from logs you already have* (M1–M6, defensive, analysis-heavy,
 gentle Linux ramp) → *active interception and the AI exposure surface* (M7–M11: proxies, the
-LLM ingester, MCP, manifests that steer an agent across servers) → *turn it back into detections*
+LLM ingester, MCP, a malicious MCP server that steals through the agent) → *turn it back into detections*
 (M12–M13).
 
 Legend, **Build status**: 🟢 material exists, needs formalizing · 🟡 partial · 🔴 to build ·
@@ -44,18 +44,18 @@ laptop: the calls to Anthropic and to the Gravwell-hosted model are made by the 
 | M2 | **Under the hood of LLM tooling**: stateless HTTP API, context as the caller's job, tokens & cost, tool calling, request schemas. *Mini-lab:* curl the API and prove it has no memory (21→13→35→59 input tokens), then offer it a tool and watch it ask for `/etc/passwd` while nothing executes | 60 | 135 | Slides + mini-lab | - | 🔒 | 🟢 validated live |
 | M2b | **Demystifying how AI "thinks"**, tokens, embeddings, next-token prediction; seed, temperature and logprobs shown live against a **Gravwell-hosted model**; "it's a regular program"; anthropomorphism as marketing. *Mini-lab:* seven `cat`-able scripts, count tokens, compare vectors, prove determinism with a seed, print the probability table behind every pick, turn the temperature up until it says potato | 45 | 180 | Slides + mini-lab | `stage-demystify` | ⏱ (lab → demo) | 🟢 validated live |
 | M3 | **The audit gap**: vendor logs are billing-shaped; dashboard limits; no security-grade sub-keys | 30 | 210 | Slides | - | ⏱ | 🟢 |
-| Lab A | **Environment onboarding & stand up Gravwell (docker)**: SSH in, verify env (`WORKSHOPUID`, docker), `docker compose up`, reach the UI, first `tag=` search | 60 | 270 | Guided lab | `stage-gravwell` | 🔒 | 🟢 validated |
-| M4 + Lab B | **Shadow-AI from network logs**: ingest Corelight/Zeek; Method 1 DNS + `AI_DOMAINS`, 2 SSL SNI, 3 HTTP host, 4 SSO; **correlate DNS ↔ SSL/conn** to separate real usage from DNS-only noise | 75 | 345 | Slides + lab | `stage-shadowai` | 🔒 (Method 4 ⤵) | 🟢 |
+| Lab 00 | **Stand up Gravwell (docker)**: verify the seat (`WORKSHOPUID`, docker), SSH in if you have not yet (`WORKSHOPUID`, docker), `docker compose up`, reach the UI, first `tag=` search | 60 | 270 | Guided lab | `stage-gravwell` | 🔒 | 🟢 validated |
+| M4 + Lab 02 | **Shadow-AI from network logs**: ingest Corelight/Zeek; Method 1 DNS + `AI_DOMAINS`, 2 SSL SNI, 3 HTTP host, 4 SSO; **correlate DNS ↔ SSL/conn** to separate real usage from DNS-only noise | 75 | 345 | Slides + lab | `stage-shadowai` | 🔒 (Method 4 ⤵) | 🟢 |
 | M4b | **Gravwell tour**: debrief of what Lab 02 just used (the pipeline model, module families, raw-in / shaped-out), then a live browser tour (Query Studio, time picker, the Corelight kit's dashboards, resources, saved searches), Community Edition and the open docs. Deck `03c-gravwell-tour.md`: light by design (the instructor drives the browser), plus a high-level map of the platform's user-facing components and the *Cadet Academy: Crafting a Query* video for homework. Logbot is available on every seat but students are asked not to lean on it: they write and hand-tweak the lab queries, and reach for Logbot only when stuck | 60 | 405 | Slides + live demo | - | ⏱ (→ 30: skip the browser tour) | 🟢 |
-| M5 + Lab C | **Endpoint detection with Sysmon**: process creation, the ParentImage race condition, child-count clustering per ParentProcessId, high-bash-spawner signature; find the rogue agent PID and pivot to its commands | 105 | 510 | Slides + lab | `stage-sysmon` | 🔒 | 🟢 |
+| M5 + Lab 03 | **Endpoint detection with Sysmon**: process creation, the ParentImage race condition, child-count clustering per ParentProcessId, high-bash-spawner signature; find the rogue agent PID and pivot to its commands | 105 | 510 | Slides + lab | `stage-sysmon` | 🔒 | 🟢 |
 | M6 | **Checkpoint & re-center**: what existing logs can/can't reveal; **"Questions for the CISO"** one-pager (`materials/`) worked through as a group; preview of interception | 45 | 555 | Discussion | - | ⏱ | 🟢 |
 | R | **Recap & re-center**: floating 30-min module, run whenever the course resumes after a long break (a second session, a second day, a week later) | 30 | 585 | Slides | - | ⏱ | 🟢 |
-| M7 + Lab D | **The AI user & opencode config**, install opencode, connect a provider, let an agent fix a real bug, then **audit it from the endpoint**: the log has no content, the local SQLite DB has *everything* (prompts, tool calls + outputs, cost), and all five properties a SOC needs are still wrong. Motivates the proxy | 60 | 645 | Lab | `stage-opencode` | 🔒 | 🟢 validated live |
-| M8 + Lab E | **LLM proxies, part 1 (litellm)**: litellm in docker, route a request, syslog to Gravwell, see how weak generic gateway logs are | 60 | 705 | Lab | `stage-llm-proxy` | ⏱ | 🟢 validated live |
-| M9 + Lab F | **LLM proxies, part 2: content-capturing proxies.** (a) the **Gravwell LLM ingester** (OpenAI + Anthropic listeners; prompts, replies, tool calls, usage, sessions) as the primary path; (b) the **vendor-agnostic Python proxy** (`src/logging-proxy/`) emitting the same event schema as JSONL/syslog for any SIEM. Point opencode at each; explore `tag=llm` / `tag=proxy`; (c) install Gravwell's **LLM Observability kit** and read the same traffic through dashboards, searches and a conversation-replay template somebody else wrote, the one kit in the course that fits the data with no macro edit; (d) **the system prompt**: read the ~9,700 characters nobody typed, measure it against the 23 they did, find the `<env>` block describing their box, and edit the agent's instructions by writing `AGENTS.md` | 105 | 810 | Lab | `stage-llm-proxy` | 🔒 | 🟢 validated live |
-| M10 + Lab G | **MCP deep dive, read it, then write it.** *Part 1:* speak MCP by hand to **your own Gravwell's** MCP server (`/api/mcp`), 50 tools, 11 mutating, `whoami` bounds the blast radius. *Part 2:* **write your own MCP server** from a TOML config (`src/mcp-lab-server/`), connect opencode to it, then change a tool **description** and watch the agent's behaviour change with no code edited. Ships its own JSON-RPC to `tag=mcp` | 105 | 915 | Slides + protocol walkthrough + build | - | ⏱ (Part 1 → demo) | 🟢 validated live |
-| M11 + Lab H | **MCP tool interaction across servers.** Put Gravwell's own MCP server next to the one you wrote (Lab 06); build a query-advisor tool whose manifest makes the model call Gravwell's `parse_query` **first**, and a threat-hunt **stub** (APT Cherdenko, last seen in space) that receives ten raw Gravwell entries the model fetched with `sample_tag_entries`; then watch one sentence in a description, and then the server's `instructions`, make the model call another server's tools that nobody asked for; a control prompt shows the rule stays dormant until the tool is used | 60 | 975 | Lab | `stage-mcp-tools` | 🔒 | 🟢 validated live |
-| M12 | **Detect it in the ingester's data** (Lab 07 Part 3, `tag=llm`): tool calls by server, sessions that touched more than one server, the chain in order, tools nobody asked for (a compound query, the Lab 02 skill), first-seen tool names, and why the server's own log cannot see any of it; stretch: schedule one as a Gravwell scheduled search | 45 | 1020 | Lab | `stage-mcp-tools` | ⏱ (→ guided demo) | 🟢 validated live |
+| M7 + Lab 04 | **The AI user & opencode config**, install opencode, connect a provider, let an agent fix a real bug, then **audit it from the endpoint**: the log has no content, the local SQLite DB has *everything* (prompts, tool calls + outputs, cost), and all five properties a SOC needs are still wrong. Motivates the proxy | 60 | 645 | Lab | `stage-opencode` | 🔒 | 🟢 validated live |
+| M8 + Lab 05 | **LLM proxies, part 1 (litellm)**: litellm in docker, route a request, syslog to Gravwell, see how weak generic gateway logs are | 60 | 705 | Lab | `stage-llm-proxy` | ⏱ | 🟢 validated live |
+| M9 + Lab 05 | **LLM proxies, part 2: content-capturing proxies.** (a) the **Gravwell LLM ingester** (OpenAI + Anthropic listeners; prompts, replies, tool calls, usage, sessions) as the primary path; (b) the **vendor-agnostic Python proxy** (`src/logging-proxy/`) emitting the same event schema as JSONL/syslog for any SIEM. Point opencode at each; explore `tag=llm` / `tag=proxy`; (c) install Gravwell's **LLM Observability kit** and read the same traffic through dashboards, searches and a conversation-replay template somebody else wrote, the one kit in the course that fits the data with no macro edit; (d) **the system prompt**: read the ~9,700 characters nobody typed, measure it against the 23 they did, find the `<env>` block describing their box, and edit the agent's instructions by writing `AGENTS.md` | 105 | 810 | Lab | `stage-llm-proxy` | 🔒 | 🟢 validated live |
+| M10 + Lab 06 | **MCP deep dive, read it, then write it.** *Part 1:* speak MCP by hand to **your own Gravwell's** MCP server (`/api/mcp`), 50 tools, 11 mutating, `whoami` bounds the blast radius. *Part 2:* **write your own MCP server** from a TOML config (`src/mcp-lab-server/`), connect opencode to it, then change a tool **description** and watch the agent's behaviour change with no code edited. Ships its own JSON-RPC to `tag=mcp` | 105 | 915 | Slides + protocol walkthrough + build | `stage-mcp` | ⏱ (Part 1 → demo) | 🟢 validated live |
+| M11 + Lab 07 | **A malicious MCP server.** Put Gravwell's own MCP server next to the one you wrote (Lab 06) and build a query-advisor tool whose manifest makes the model call Gravwell's `parse_query` **first**: the model is the courier between servers. Then plant five `FLAG{...}` secrets in `tag=flag` and build the server APT Cherdenko would publish: a `log-hygiene` utility (behaviour `exfiltrate`) whose manifest makes the model fetch the secret tag with Gravwell's own `sample_tag_entries` and hand it over as an argument, while the agent reports CLEAN; then hide the same theft inside the working advisor (`loot_file`, `instructions`, an argument description) with its tool description untouched; a control prompt shows the rule stays dormant until the tool is used | 60 | 975 | Lab | `stage-mcp-tools` | 🔒 | 🟢 validated live |
+| M12 | **Catch it in the ingester's data** (Lab 07 Part 3, `tag=llm`): tool calls by server, sessions that crossed servers, the theft in order (a fetch from server A, then a call into server B carrying it), a tag nobody asked for (a compound query, the Lab 02 skill), the canary (`FLAG{` entering the model in a tool result and leaving in a tool call), argument size and first-seen tool names, and why the attacker's own log is the attacker's; stretch: schedule the canary as a Gravwell scheduled search | 45 | 1020 | Lab | `stage-mcp-tools` | ⏱ (→ guided demo) | 🟢 validated live |
 | M13 | **Wrap & next steps**, the **AI Audit Checklist** one-pager (`materials/`) as the spine: what to collect in four tiers, first detections, architecting for auditability; where research is heading; Q&A | 30 | 1050 | Discussion | - | ⏱ | 🟢 |
 
 Core total: **1050 min**, plus the padding modules below.
@@ -74,7 +74,7 @@ each lab takes.
 | P2 · **Vibe-code your own proxy** | 45 | M9 | Students extend their own copy of `src/logging-proxy/` **using opencode, routed through the proxy**, so it records the conversation in which they modify it: add a dropped field (`temperature`, the envelope cherry-picks, so it takes two edits), add a webhook sink, add a secret-shape detector (**log the shape, never the secret**). `labs/_stretch/extend-the-proxy/` | 🟢 solutions written + validated |
 | P3 · **Semantic search over LLM logs** | 20–30 | M9 or M12 | **Instructor demo.** Embed every prompt/reply at ingest (ingester `vector` preprocessor) and search `tag=llm` **by meaning**: `grep "credential"` returns nothing while `semantic "someone leaked a credential"` finds *"I accidentally committed an API key…"* at 0.72. Includes the failure case, so the room doesn't over-trust it. `labs/_stretch/semantic-search/` · `slides/05b-semantic-search.md` · `scripts/enable-semantic.sh` | 🟢 validated live |
 | P4 · **A second client through the same proxy** | 30 | M9 | Run **Claude Code** at the same ingester listener, same task, and compare: it **sends** `x-claude-code-session-id` where opencode doesn't (so one client's sessions are supplied and the other's are *inferred*), opencode opens an extra ~606-token session you never asked for, tool names differ by case (`Read` vs `read`, detection-breaking), and the same one-sentence task costs **60,142 vs 15,972** input tokens. `labs/_stretch/second-client/` | 🟢 validated live |
-| P9 · **Shadow AI beyond the wire** | 60–75 | M4 (or run as Lab B Part 2; or after M6) | The **same fourteen hosts** as Lab B through four logs the network sensor lacks: osquery inventory (a local model with zero network signal), an identity-aware TLS-inspecting proxy (a blocked upload, SDK user agents, an AI feature inside sanctioned Notion found by request-size growth), CloudTrail (a developer wiring Bedrock into prod in nine minutes), and Workspace OAuth audit (HR consents to "ChatGPT" from a phone → 505 MB of Drive pulled server-to-server, the host Lab B *cleared*). Ends with a host × source matrix. `labs/_stretch/shadow-ai-sources/`, take-home `materials/shadow-ai-detection-matrix.md` | 🟢 validated live |
+| P9 · **Shadow AI beyond the wire** | 60–75 | M4 (or run as Lab 02 Part 2; or after M6) | The **same fourteen hosts** as Lab 02 through four logs the network sensor lacks: osquery inventory (a local model with zero network signal), an identity-aware TLS-inspecting proxy (a blocked upload, SDK user agents, an AI feature inside sanctioned Notion found by request-size growth), CloudTrail (a developer wiring Bedrock into prod in nine minutes), and Workspace OAuth audit (HR consents to "ChatGPT" from a phone → 505 MB of Drive pulled server-to-server, the host Lab 02 *cleared*). Ends with a host × source matrix. `labs/_stretch/shadow-ai-sources/`, take-home `materials/shadow-ai-detection-matrix.md` | 🟢 validated live |
 | P8 · **Audit an AI assistant from its own logs** | 45 | M10 (or M3) | Reconstruct a real MCP-enabled assistant (Gravwell Logbot) from its app logs: tool calls, token spend, a UEBA outlier, and where content-blind logging stops. `labs/_stretch/ai-assistant-audit/` | 🟢 |
 
 ### Not included
@@ -92,16 +92,16 @@ start from the deck's stretch section rather than these stubs.
 
 1. Run the M2b mini-lab as a front-of-room demo instead of hands-on (−20); the deck's three "Demo!"
    slides were written for that. Keep the deck: "how AI works" is the first thing this course must teach.
-2. Drop Method 4 (SSO) from Lab B (−15).
+2. Drop Method 4 (SSO) from Lab 02 (−15).
 3. M12 becomes a guided demo instead of a lab (−30).
 4. Trim M0/M1/M3/M6 discussion (−30 total).
 5. Skip litellm (M8) entirely and go straight to the LLM ingester in M9 (−60). The "generic
    proxies log too little" point can be made in one slide.
-6. Run **M10 Part 1 as a front-of-room demo** rather than hands-on (−20).
-7. M4b Gravwell tour: skip the browser tour and keep the four slides (−30). Never cut it entirely;
-   Lab 03's `xml` syntax is the first thing students cannot guess, and this is where they learn
-   where the docs are. Protocol *reading* works
+6. Run **M10 Part 1 as a front-of-room demo** rather than hands-on (−20). Protocol *reading* works
    fine as a demonstration. Keep **Part 2 hands-on**, protocol *authoring* doesn't demo.
+7. M4b Gravwell tour: skip the browser tour and keep the four slides (−30). Never cut it entirely;
+   Lab 03's `winlog` syntax is the first thing students cannot guess, and this is where they learn
+   where the docs are.
 
 ## Take-home materials (assembled from the repo)
 
@@ -128,18 +128,18 @@ students `git pull`). Each `stage-*` tag is also that lab's recovery point
 - **Gravwell image is PINNED to `gravwell/gravwell:5.10.1`.** Lab 06 needs the MCP server at
   `/api/mcp`, which only exists on 5.10.x: a stale `:latest` (5.8.13) 404s. `preflight.sh` runs a
   real MCP `initialize` and fails if it doesn't get 200.
-- **Gravwell runs in docker, one stack per attendee** (Lab A compose, ports derived from
+- **Gravwell runs in docker, one stack per attendee** (Lab 00 compose, ports derived from
   `WORKSHOPUID`). Validated on a lab host.
 - **LLM ingester runs as a sidecar in the same compose** (`llm-ingester` service, the official
   `gravwell/llm_ingester:5.10.1` image). Ingests to the student's indexer over the compose
   network on 4023. Needs `GRAVWELL_INGEST_AUTH` **and** `GRAVWELL_INGEST_SECRET` set to the same
   value on the gravwell service (setting only one is what desynced simple_relay earlier).
 - **Shadow-AI data: attendees ingest it themselves** via the per-tag `simple_relay` listeners
-  (`nc localhost ${WORKSHOPUID}01 < corelight_dns.jsonl`, validated).
+  (`nc -q1 localhost ${WORKSHOPUID}01 < corelight_dns.jsonl`, validated).
 - **Data source:** the synthetic generator (`src/log-generator/`) is primary; a real Corelight
   sample in `datasets/corelight/` anchors its schema.
 - **Datasets.** `ai_domains.txt` (+ an `ai_domains_plus_api.txt`
-  with provider API hostnames), the real Sysmon XML (rogue PID 3565), the legacy proxy capture, the
+  with provider API hostnames), the real Sysmon XML (rogue PID 3565), the legacy proxy capture,
   and Gravwell's own AI-assistant logs are in `datasets/`. Lab 02's data is now
   a **scenario generator** (`src/log-generator/`) with 11 correlated shadow-AI scenarios across 14
   hosts; all hunt + correlation searches were run against a live Gravwell. The generator can re-time
@@ -149,8 +149,9 @@ students `git pull`). Each `stage-*` tag is also that lab's recovery point
 - **Data generators** (`src/log-generator/`, all validated in Gravwell): `generate_corelight_logs.py`
   (Lab 02 shadow-AI), `generate_shadow_ai_sources.py` (P9: osquery/SWG/CloudTrail/Workspace for the same cast),
   `generate_logbot_logs.py` (P8 assistant audit), and `retime_datasets.py` (refresh
-  any real capture to "now"). Regenerate before you start so every 24h window is "today". Lab 07 needs no
-  dataset: its detection data is the `tag=llm` traffic the room produces in Parts 1 and 2.
+  any real capture to "now"). Regenerate before you start so every 24h window is "today". Lab 07's only dataset is
+  `labs/07-mcp-tool-interaction/flag.txt` (five lines into `tag=flag` through `<ID>15`); its detection data is
+  the `tag=llm` traffic the room produces in Parts 1 and 2.
 
 ## Port map (per seat, `<ID>` = `WORKSHOPUID`, 10–49)
 
@@ -169,11 +170,14 @@ students `git pull`). Each `stage-*` tag is also that lab's recovery point
 | `<ID>12` | Ingest listener: secure web gateway access log (P9, tag=swg) |
 | `<ID>13` | Ingest listener: AWS CloudTrail (P9, tag=cloudtrail) |
 | `<ID>14` | Ingest listener: Google Workspace token audit (P9, tag=gws) |
+| `<ID>15` | Ingest listener: the Lab 07 flag, five secrets an agent is tricked into fetching (M11, tag=flag) |
 | `<ID>00` | litellm (Lab 05 Part 1) |
 | `<ID>80` | LLM ingester: OpenAI-compatible listener (`/v1/chat/completions`) |
 | `<ID>81` | LLM ingester: Anthropic Messages listener (`/v1/messages`) |
 | `<ID>90` | Vendor-agnostic Python logging proxy |
 | `<ID>91` | The student's own MCP lab server, HTTP transport (M10) |
+| `<ID>92` | The Python proxy in gateway mode, loopback only (Lab 05 Part 2b stretch, the e2e passes) |
 
-Host-wide (not per-seat): **80/443**, the share site (course documents over HTTPS, basic auth);
-**127.0.0.1:9010**, the loopback LLM relay for Lab 01b (root-only holder of the model token).
+Host-wide (not per-seat): **80/443**, the host's Traefik, which routes `share.<lab-host>` to the share site (course documents over HTTPS, basic auth);
+**127.0.0.1:9010**, the loopback LLM relay for Lab 01b (root-only holder of the model token);
+**39443**, the optional P3 semantic-search demo instance (`enable-semantic.sh`, seat id `SEMANTIC_UID`), listed in the attendee prerequisites.

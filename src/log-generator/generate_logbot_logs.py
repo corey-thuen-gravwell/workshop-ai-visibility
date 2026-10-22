@@ -15,7 +15,7 @@ Teaching points it sets up:
 
 Output: raw RFC5424 syslog lines (ingest as tag=logbot via the seat listener) + instructor key.
 (--wrapped also emits Gravwell tagged-export {TS,Tag,SRC,Data} for UI import / parity with the real dump.)
-    ./generate_logbot_logs.py --out ../../datasets/gravwell-ai-assistant/generated/logbot.json \
+    ./generate_logbot_logs.py --out ../../datasets/gravwell-ai-assistant/generated/logbot.log \
         --answer-key ../../datasets/gravwell-ai-assistant/generated/answer-key.json --seed 1
     then per seat:  nc -q1 localhost ${WORKSHOPUID}08 < logbot.log
 """

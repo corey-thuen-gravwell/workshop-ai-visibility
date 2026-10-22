@@ -25,7 +25,7 @@ The providers won't give us security-grade logs.
 So we identify AI usage from logs we **already should have**:
 
 - **NDR**: network detection & response (Zeek / Corelight)
-- **EDR / SDR**: endpoint (Sysmon), *next module*
+- **EDR / XDR**: endpoint (Sysmon), *next module*
 
 <!-- None of this needs the vendor's cooperation. It's not perfect, but it's real signal you own. -->
 
@@ -62,9 +62,10 @@ sed -E '/^\s*#/d; /^\s*$/d; s/^0\.0\.0\.0[[:space:]]+//' noai_hosts.txt \
 ## Method 1: the search
 
 ```
-tag=corelight_dns ax
+tag=corelight_dns json "id.orig_h" as src_ip query
 | lookup -s -r AI_DOMAINS query Domain
-| table src_ip src_port dst_ip dst_port query
+| count by src_ip query
+| table src_ip query count
 ```
 
 `lookup` keeps only rows whose `query` matches a domain in `AI_DOMAINS`.

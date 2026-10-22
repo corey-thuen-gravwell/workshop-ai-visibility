@@ -1,15 +1,15 @@
 # Setup: credentials and where they go
 
 Everything in this course that talks to the outside world needs one of three things: an
-**Anthropic API key** (the labs that call a model), a **Gravwell license** (the log-analysis
-backend every analysis lab uses), and, for one lab, an **Ollama-shaped model endpoint**. None of
-them are in this repository. This page says where to get each one and exactly where to put it,
-for both ways of running the course.
+**Anthropic API key** (the labs that call a model), a **Gravwell license file** (the log-analysis
+backend every analysis lab uses; working alone, the free tier needs no sign-up at all), and, for
+one lab, an **Ollama-shaped model endpoint**. None of them are in this repository. This page says
+where to get each one and exactly where to put it, for both ways of running the course.
 
 | | Self-guided (your own machine) | Instructor-led (a lab host with seats) |
 |---|---|---|
 | Anthropic API key | `ANTHROPIC_API_KEY` in your `~/.workshop_env` | `ANTHROPIC_API_KEY` in `/opt/workshop/.env`; `makeuser.sh` copies it into every seat |
-| Gravwell license | `gravwell.license` at the repo root | `gravwell.license` at the root of the authoring copy on the host; the student repo build ships it to seats |
+| Gravwell license | `gravwell.license` at the repo root: the one-word free-tier file from section 2, no sign-up | `gravwell.license` at the root of the authoring copy on the host; the student repo build ships it to seats |
 | Lab 01b model | Ollama on your machine, `GRAVWELL_LLM_URL` pointed at it | `instructor/runbook/gravwell-llm.env`, served to seats through a root-only relay |
 | TLS certificate | Self-signed, generated into `labs/00-environment-gravwell/config/` | Let's Encrypt into `/opt/workshop/certs` via `issue-cert.sh` |
 
@@ -52,21 +52,24 @@ export GRAVWELL_INGEST_SECRET="IngestSecrets"
 # Lab 01b: your Ollama (section 3). In a class this points at a relay instead.
 export GRAVWELL_LLM_URL="http://127.0.0.1:11434"
 export MODEL="llama3.2"
-export EMBED_MODEL="qwen3-embedding"
+export EMBED_MODEL="qwen3-embedding:0.6b"
 # Lab 00 writes a Gravwell API token to ~/.gravwell_token; every later lab reads it from here.
 if [ -r "$HOME/.gravwell_token" ]; then
     export GRAVWELL_TOKEN="$(cat "$HOME/.gravwell_token")"
 fi
 ENV
 chmod 600 ~/.workshop_env
-grep -q workshop_env ~/.bashrc || echo '[ -f ~/.workshop_env ] && . ~/.workshop_env' >> ~/.bashrc
+# First line of .bashrc (Ubuntu's .bashrc returns early for non-interactive shells) and .profile
+# (login shells, `bash -l`), the same two places the class seats get it.
+grep -q workshop_env ~/.bashrc  || sed -i '1i [ -f ~/.workshop_env ] && . ~/.workshop_env' ~/.bashrc
+grep -q workshop_env ~/.profile || echo '[ -f ~/.workshop_env ] && . ~/.workshop_env' >> ~/.profile
 . ~/.workshop_env
 ```
 
 Leave `WORKSHOP_CERT_DIR` unset: the Lab 00 compose then falls back to the self-signed certificate
-you generate in section 4. Also copy `.env.example` to `.env` at the repo root and set the same
-`ANTHROPIC_API_KEY`, `WORKSHOPUID` and `GRAVWELL_INGEST_SECRET` there; docker compose reads `.env`,
-your shell reads `~/.workshop_env`, and they must agree.
+you generate in section 4. The compose reads `WORKSHOPUID` and `GRAVWELL_INGEST_SECRET` from your
+shell, so source `~/.workshop_env` before any `docker compose` command. (A repo-root `.env` is for
+the instructor-led host; compose runs from `labs/00-environment-gravwell/` and never reads it.)
 
 ### Instructor-led: `/opt/workshop/.env`
 
@@ -84,23 +87,46 @@ per-delivery key: created before the class, spend-limited, revoked the day the c
 
 ## 2. The Gravwell license
 
-Gravwell will not start without a license file. Without one the stack starts and immediately
-stops, with nothing useful in `docker compose logs`, which is a confusing first hour if you do not
-know to look for it.
+Gravwell will not start without a license file. Without one the stack starts and then refuses
+every login and every ingest connection with `{"Error":"missing license"}`, which is a confusing
+first hour if you do not know to look for it. The Lab 00 compose mounts `../../gravwell.license`
+(repo root, git-ignored) into the container read-only, so the file has to exist before
+`docker compose up`.
 
-1. Get a free **Community Edition** license from <https://www.gravwell.io/download>. It arrives
-   by email as a file. Community Edition is enough for every lab in this course: one node per
-   instance, which is exactly what each seat runs.
-2. Save it at the **root of this repository** as `gravwell.license`. The Lab 00 compose mounts
-   `../../gravwell.license` into the container read-only, and the student repo build refuses to
-   publish without it.
-3. Check it is ignored: `git status` should not list it.
+### Self-guided: the free tier, no sign-up
+
+Gravwell's **Free** tier is built into the product: 2 GB/day of ingest, one node, never expires,
+no account and no email. It is activated by a license file whose entire content is the word
+`UNLICENSED`. The whole course ingests a few megabytes a day, and no lab uses a feature the free
+tier lacks, so this is all you need:
+
+```bash
+printf 'UNLICENSED' > gravwell.license      # repo root; exactly that word, no trailing newline
+git status --short | grep license           # prints nothing: the file is ignored
+```
+
+The byte count matters: Gravwell compares the file content exactly, and a trailing newline (what
+`echo` writes) leaves it waiting for a license. Check with `wc -c gravwell.license`, which should
+say `10`. When Lab 00 is up, the UI's license page reports type **free** with a 2.00 GB/day limit,
+and `tag=gravwell` returns rows. The free tier is for non-commercial use; see
+<https://docs.gravwell.io/license/license.html> for the terms and the full tier table.
+
+### Instructor-led: a Community Edition or paid license
+
+For a class, get a **Community Edition** license from <https://www.gravwell.io/download>. It is
+free, arrives by email as a file, allows commercial use, and raises the ingest cap to about
+14 GB/day. (A paid license works the same way.) Save it at the **root of the authoring copy** as
+`gravwell.license`; the student repo build refuses to publish without it and ships it to every
+seat.
 
 The same file works for every seat on a lab host: the `MaxNodes: 1` limit is per standalone
 instance, and each seat's container is its own instance. Note the expiry date in the email; a
 Community license lasts long enough for a course, but a repo checked out months later may need a
 fresh one. `preflight.sh` checks the file is present on a lab host; the licensed state itself
 shows up as a working login and `tag=gravwell` returning rows in Lab 00.
+
+The free-tier file also works on a lab host if the class is non-commercial and the seats stay
+under 2 GB/day each, which the course data does by a wide margin.
 
 ---
 
@@ -113,13 +139,21 @@ per-token probabilities, which a hosted chat API does not return.
 ### Self-guided: Ollama
 
 ```bash
+sudo apt install -y zstd                            # the installer unpacks with it and stops without it
 curl -fsSL https://ollama.com/install.sh | sh      # or your package manager
-ollama pull llama3.2                                # generation
-ollama pull qwen3-embedding                         # embeddings (nomic-embed-text also works)
+ollama pull llama3.2                                # generation, 2 GB
+ollama pull qwen3-embedding:0.6b                    # embeddings, 0.6 GB (or nomic-embed-text)
 ```
 
+Name the tag: plain `qwen3-embedding` is the 8B model, 4.7 GB on disk and more than that in
+memory, and on a 4 GB box the kernel kills it the first time the lab embeds a sentence. The class
+uses the big one on a hosted box, which is why its vectors have 4096 dimensions where yours have
+1024; nothing in the lab depends on the number.
+
 `~/.workshop_env` from section 1 already points `GRAVWELL_LLM_URL` at `http://127.0.0.1:11434`
-and names the two models. `logprobs.bash` and its siblings need an Ollama build recent enough to
+and names the two models. On a box with 4 GB, also keep Ollama from holding both models in memory
+at once: `sudo systemctl edit ollama` and add `[Service]` / `Environment=OLLAMA_MAX_LOADED_MODELS=1`,
+then `sudo systemctl restart ollama`. `logprobs.bash` and its siblings need an Ollama build recent enough to
 return `logprobs` on `/api/generate`; if the candidates column comes back empty, update Ollama.
 
 ### Instructor-led: a hosted endpoint behind the relay
@@ -151,7 +185,8 @@ looks for it. Your browser will warn once; accept it.
 ```bash
 cd labs/00-environment-gravwell/config
 openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
-    -keyout key.pem -out cert.pem -subj "/CN=localhost"
+    -keyout key.pem -out cert.pem -subj "/CN=localhost" \
+    -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"   # browsers and node check the SAN, not the CN
 ```
 
 **Instructor-led:** attendees browse from the venue network to the host's public name, so the
@@ -167,10 +202,13 @@ mounts it into every seat's container without the seat being able to read the pr
 . ~/.workshop_env
 echo "$WORKSHOPUID"                                   # your seat id
 echo "${ANTHROPIC_API_KEY:0:10}"                      # sk-ant-... and nothing more on screen
-ls -l gravwell.license                                # present at the repo root
+wc -c gravwell.license                                # present at the repo root (10 = the free-tier file)
 curl -s "$GRAVWELL_LLM_URL/api/tags" | jq '.models[].name'    # Lab 01b's models answer
-git status --short | grep -E 'license|\.env|gravwell-llm' && echo "STOP: a credential file is not ignored"
+git status --short | grep -E 'license|\.env|gravwell-llm|\.pem' \
+    && echo "STOP: a credential file is not ignored"
+ls datasets/corelight/generated/ 2>/dev/null | head -2   # regenerated today? (self-study guide §4)
 ```
 
-If all four lines behave, go to `labs/00-environment-gravwell/README.md` (or, working alone,
-`materials/self-study-guide.md` first).
+If those lines behave, go to `labs/00-environment-gravwell/README.md` (or, working alone,
+`materials/self-study-guide.md` first: its section 3 covers what the box needs and how to reach
+the Gravwell UI when the box is a remote VM).

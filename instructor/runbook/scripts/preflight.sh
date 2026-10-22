@@ -1,13 +1,20 @@
 #!/bin/bash
 # Day-of pre-flight checklist for the lab host. Run as root. Read-only: reports, never fixes.
-# Usage: ./preflight.sh            (SEATS/START_ID as in makeuser.sh; default 2 seats, ids 10-11)
+# Usage: ./preflight.sh            (SEATS/START_ID as in makeuser.sh: env, then /opt/workshop/.env, then 2 seats from 10)
 set -uo pipefail
-SEATS="${SEATS:-2}"; START_ID="${START_ID:-10}"; END_ID="${END_ID:-$((START_ID + SEATS - 1))}"
 ENV_FILE="${ENV_FILE:-/opt/workshop/.env}"
+# The operator's SEATS/START_ID/END_ID win; otherwise the class size comes from $ENV_FILE (as in
+# makeuser.sh); otherwise 2 seats from id 10.
+_cli_seats="${SEATS:-}"; _cli_start="${START_ID:-}"; _cli_end="${END_ID:-}"
+[ -f "$ENV_FILE" ] && { set -a; . "$ENV_FILE" 2>/dev/null; set +a; }
+SEATS="${_cli_seats:-${SEATS:-2}}"; START_ID="${_cli_start:-${START_ID:-10}}"; END_ID="${_cli_end:-${END_ID:-$((START_ID + SEATS - 1))}}"
 # The lab host's public DNS name: LAB_HOST in .env, or HOST= on the command line.
 HOST="${HOST:-${LAB_HOST:-$(sed -n 's/^LAB_HOST="\(.*\)"$/\1/p' "$ENV_FILE" 2>/dev/null)}}"
 HOST="${HOST:-$(hostname -f)}"
 CERT_DIR="${CERT_DIR:-/opt/workshop/certs}"
+# The share site's name, routed by the host's Traefik: SHARE_HOST in .env, else share.<HOST>.
+SHARE_HOST="${SHARE_HOST:-$(sed -n 's/^SHARE_HOST="\(.*\)"$/\1/p' "$ENV_FILE" 2>/dev/null)}"
+SHARE_HOST="${SHARE_HOST:-share.$HOST}"
 REPO_DIR="${REPO_DIR:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 pass=0; fail=0; warn=0
 ok()   { echo "  ✅ $*"; pass=$((pass+1)); }
@@ -110,6 +117,50 @@ for img in gravwell/gravwell:5.10.1 gravwell/llm_ingester:5.10.1 hello-world:lat
     docker image inspect "$img" >/dev/null 2>&1 && ok "$img" || meh "$img not pulled/built"
 done
 
+echo "== Seat stacks vs the Lab 00 config they were started from"
+# A stack started before a listener was added, or before a listener config changed, keeps the old
+# ports and the old inode of the bind-mounted config. Two things Lab 07 depends on are checked per
+# running seat: the <ID>15 flag listener, and Ignore-Timestamps on the mcp listener.
+stale=0; running=0
+for i in $(seq "$START_ID" "$END_ID"); do
+    docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "${i}gravwell" || continue
+    running=$((running+1)); why=""
+    # not grep -q: under pipefail an early exit reports ss's broken pipe as a failure
+    [ -n "$(ss -ltnH 2>/dev/null | awk '{print $4}' | grep -E "[:.]${i}15$")" ] || why="no <ID>15 flag listener"
+    docker exec "${i}gravwell" grep -qs 'Ignore-Timestamps=true' /opt/gravwell/etc/simple_relay.conf.d/mcp.conf 2>/dev/null \
+        || why="${why:+$why; }mcp listener extracts timestamps"
+    if [ -n "$why" ]; then stale=$((stale+1)); bad "seat $i stack predates the current Lab 00 config ($why): docker compose up -d --force-recreate gravwell, as workshop$i"; fi
+done
+[ "$running" -eq 0 ] && meh "no seat stacks running (expected before class; Lab 00 starts them)" \
+    || { [ "$stale" -eq 0 ] && ok "$running running seat stack(s) match the current Lab 00 config"; }
+
+echo "== Student repo bookkeeping"
+all="${BARE_ALL:-/opt/gitsrv/jarvis-all.git}"
+if [ -f "$all/stages.txt" ]; then
+    want=$(python3 - "$REPO_DIR/student-repo/checkpoints.yaml" <<'PY'
+import re, sys
+txt = open(sys.argv[1], encoding="utf-8").read()
+rows = []
+for m in re.finditer(r'^\s*-\s*tag:\s*(\S+)\s*$(.*?)(?=^\s*-\s*tag:|\Z)', txt, re.M | re.S):
+    o = re.search(r'^\s*order:\s*(\d+)', re.sub(r'#.*', '', m.group(2)), re.M)
+    rows.append((int(o.group(1)) if o else 9999, m.group(1)))
+print(" ".join(t for _, t in sorted(rows)))
+PY
+)
+    have=$(tr '\n' ' ' < "$all/stages.txt" | sed 's/ $//')
+    [ "$want" = "$have" ] && ok "built stages match student-repo/checkpoints.yaml" \
+        || bad "built stages ($have) differ from the manifest ($want): rebuild with build-student-repo.sh, then release-stage.sh"
+else meh "$all/stages.txt missing: build-student-repo.sh has not run on this copy"; fi
+if [ -f "$REPO_DIR/.sync-rev" ]; then ok "authoring copy synced from commit $(cat "$REPO_DIR/.sync-rev")"
+else meh "no .sync-rev in $REPO_DIR: synced with an older sync-repo.sh, provenance unknown"; fi
+
+echo "== Firewall"
+if command -v ufw >/dev/null && ufw status 2>/dev/null | grep -q '^Status: active'; then
+    ok "ufw active"
+    rules="$(ufw status 2>/dev/null)"
+    for p in 22 80 443; do grep -qE "^($p|80,443|22,80,443)/tcp" <<<"$rules" && ok "ufw allows $p/tcp" || bad "ufw does not allow $p/tcp (80/443 are the share site; bootstrap-host.sh)"; done
+else meh "ufw not active (fine behind a cloud firewall; otherwise bootstrap-host.sh then ufw enable)"; fi
+
 echo "== Gravwell MCP (Lab 06 needs 5.10.x; /api/mcp 404s on older builds)"
 mcp_seat="${MCP_SEAT:-$START_ID}"
 if curl -sk -o /dev/null -m 5 "https://localhost:${mcp_seat}443/" 2>/dev/null; then
@@ -132,10 +183,18 @@ if curl -sk -o /dev/null -m 5 "https://localhost:${mcp_seat}443/" 2>/dev/null; t
     else meh "no token and no login for seat $mcp_seat, skipped /api/mcp"; fi
 else meh "seat $mcp_seat not running, skipped /api/mcp check"; fi
 
-echo "== Share server (course PDFs over HTTPS)"
+echo "== Share server (course PDFs over HTTPS, https://$SHARE_HOST/ via Traefik)"
 if docker inspect -f '{{.State.Status}}' workshop-share 2>/dev/null | grep -q running; then
     ok "workshop-share container running"
-    sc_no=$(curl -sk -o /dev/null -m 5 -w '%{http_code}' https://127.0.0.1/ 2>/dev/null)
+    sip=$(getent ahostsv4 "$SHARE_HOST" | awk 'NR==1{print $1}')
+    [ -n "$sip" ] && [ "$sip" = "$myip" ] && ok "$SHARE_HOST -> $sip (this host)" \
+                                         || bad "$SHARE_HOST resolves to '${sip:-nothing}', want $myip"
+    iss=$(echo | openssl s_client -connect 127.0.0.1:443 -servername "$SHARE_HOST" 2>/dev/null \
+          | openssl x509 -noout -issuer 2>/dev/null)
+    case "$iss" in *"Let's Encrypt"*) ok "Traefik serves a Let's Encrypt cert for $SHARE_HOST" ;;
+                   *) bad "Traefik cert for $SHARE_HOST is '${iss:-none}' (DNS, or the HTTP-01 challenge)" ;; esac
+    via=(--resolve "$SHARE_HOST:443:127.0.0.1")
+    sc_no=$(curl -sk "${via[@]}" -o /dev/null -m 5 -w '%{http_code}' "https://$SHARE_HOST/" 2>/dev/null)
     [ "$sc_no" = "401" ] && ok "share site requires a password (401)" \
                          || bad "share site returned $sc_no without credentials (want 401)"
         # read the two share values out of the env file rather than sourcing it, so a SEATS= or
@@ -143,7 +202,7 @@ if docker inspect -f '{{.State.Status}}' workshop-share 2>/dev/null | grep -q ru
     SHARE_USER="${SHARE_USER:-$(sed -n 's/^SHARE_USER="\(.*\)"$/\1/p' "$ENV_FILE" 2>/dev/null)}"
     SHARE_PASSWORD="${SHARE_PASSWORD:-$(sed -n 's/^SHARE_PASSWORD="\(.*\)"$/\1/p' "$ENV_FILE" 2>/dev/null)}"
     if [ -n "${SHARE_USER:-}" ] && [ -n "${SHARE_PASSWORD:-}" ]; then
-        sc_yes=$(curl -sk -o /dev/null -m 5 -w '%{http_code}' -u "$SHARE_USER:$SHARE_PASSWORD" https://127.0.0.1/ 2>/dev/null)
+        sc_yes=$(curl -sk -o /dev/null -m 5 -w '%{http_code}' -u "$SHARE_USER:$SHARE_PASSWORD" "${via[@]}" "https://$SHARE_HOST/" 2>/dev/null)
         [ "$sc_yes" = "200" ] && ok "share site serves with the workshop password" \
                              || bad "share site returned $sc_yes with credentials (want 200)"
     else meh "SHARE_USER/SHARE_PASSWORD not in $ENV_FILE: cannot test the login"; fi

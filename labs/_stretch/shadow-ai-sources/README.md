@@ -131,7 +131,8 @@ Fill in the matrix. One row per Lab 02 host; one column per source (`dns`, `ssl`
 meaning the source structurally cannot see that activity, not merely that it didn't. Then answer:
 
 - Which host has the **most** blind cells and still turned out to be the day's biggest exposure?
-- Which two hosts are blind in *every* network column?
+- Which host is blind in *every* network column? And which **finding** was blind to every network
+  source while its host read "cleared" in all four?
 - Which finding needed exactly **two** sources to be actionable, and which two?
 
 Write your matrix down. It is the shape of the collection plan you'd take back to work; the

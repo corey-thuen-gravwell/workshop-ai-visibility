@@ -33,7 +33,7 @@ scripts on `PATH` and wraps the host-side ones in ssh, `redeploy`, `release --ne
 | - | `scripts/reset-seats.sh` | **Before every dry run and before class.** Returns each seat to never-used: removes its containers/volumes/networks (**including the separate `<ID>litellm` project**), wipes opencode/Claude Code state, and re-clones `~/jarvis`. Keeps the account, password, keys and `~/.workshop_env`. `--dry-run` to preview |
 | - | `scripts/rmuser.sh` | teardown by seat range |
 | - | `scripts/llm_relay.py` | The relay itself (stdlib Python, loopback-only, path allowlist, injects the bearer token) |
-| 6 | `scripts/start-share-server.sh` | nginx-in-docker on 80/443 serving `$SHARE_ROOT/live` over HTTPS with basic auth + directory browsing. Verifies 401-without / 200-with |
+| 6 | `scripts/start-share-server.sh` | nginx-in-docker behind the host's Traefik (`/opt/webstack/stack` owns 80/443) at `https://$SHARE_HOST/` (default `share.$LAB_HOST`), serving `$SHARE_ROOT/live` with basic auth + directory browsing. No published ports: it joins `webstack-edge` and Traefik issues its cert (HTTP-01), so `SHARE_HOST` needs a DNS A record first. Verifies 401-without / 200-with |
 | 7 | `deploy-share.sh` **(run on the authoring box)** | Builds `share/build/*.pdf` and ships them to the host's `staged/`. Refuses to ship instructor material |
 | - | `scripts/share.sh` | **Day-of, on the host, for everything that is not a lab:** `share status` · `share publish slides/02-audit-gap` · `share publish --materials` · `share publish --all pdf` (take-home PDFs, end of day) · `share unpublish`. Labs go through `release-stage.sh`; publishing a lab page here alone warns that the seats lack the files. `--all` never releases the walkthroughs; those need `--walkthroughs` |
 | - | `scripts/lab-stage-map.py` | Joins the two manifests: which share document belongs to which stage. Used by the two scripts above |
@@ -94,7 +94,7 @@ and its nftables rule rejects packets from *established* sessions too, so it doe
 reconnects, it drops all 20 students mid-lab and keeps them out for five minutes. `preflight.sh`
 warns while this is unset; it is the one thing on the checklist that cannot be done in advance.
 
-Pre-flight (day-of, from the original checklist): ingest corelight/sysmon samples on one
-seat and run the Lab 02/03 searches; validate SSH + Gravwell login for a seat; confirm the LLM
-ingester goes hot (`docker exec <ID>llm grep -i hot /opt/gravwell/log/llm_ingester.log`, **`docker logs`
-is empty for this container**, it logs to a file inside).
+Day-of pre-flight is `class-day.md` section 5 (`preflight.sh`, then the e2e passes on one seat if
+there is time). One tip that belongs nowhere else: the LLM ingester logs to a file inside its
+container, so `docker logs <ID>llm` is empty; use
+`docker exec <ID>llm grep -i hot /opt/gravwell/log/llm_ingester.log`.

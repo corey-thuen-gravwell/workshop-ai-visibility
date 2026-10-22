@@ -120,7 +120,7 @@ token count; `num_predict:1` keeps the call cheap.
 
 ## Task 2: Embeddings
 
-**Measured:** `qwen3-embedding` returns **4096** dimensions. First eight for "potato":
+**Measured:** `qwen3-embedding` returns **4096** dimensions (the hosted 8B; a solo reader on `qwen3-embedding:0.6b` sees **1024**, and `similar.bash` still puts queen nearest king at 0.79). First eight for "potato":
 `[0.0116, 0.0175, 0.0087, -0.0068, 0.0203, …]`: meaningless individually, and that's the point.
 
 `./similar.bash` (default set):
@@ -295,6 +295,12 @@ Land three things, in this order:
    token and a program executed it*. You can't audit a mind. You can absolutely log a request
    with `temperature`, `seed`, a prompt, and the tool call that came back. That is the rest of
    this course.
+4. **The relay was a preview.** The handout's last bullet: nobody in the room held a credential for
+   that model; one process on `127.0.0.1:9010` did, and it decided which paths they could reach.
+   That is the shape Lab 05 Part 2b has them build by hand for the Anthropic key, and the shape the
+   LLM ingester takes when it holds the provider key. Plant it in one sentence; do not explain it
+   yet. (Solo readers used their own Ollama and held no credential at all; same shape, with them as
+   the relay.)
 
 ## Failure table
 

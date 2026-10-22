@@ -26,11 +26,22 @@ DRY=""; [ "${1:-}" = "--dry-run" ] && DRY="--dry-run"
 # in particular: the HOST generates it (build-student-repo.sh) with timestamps anchored to now,
 # and redeploy.sh reuses the host's copy. Shipping the authoring box's stale copy over it put
 # two-day-old Lab 02 data in front of a dry run. Never again.
-EXCLUDES=(--exclude=.git --exclude=__pycache__ --exclude='*.pyc'
+# .devcontainer is the authoring sandbox (its keys/ holds deploy keys): never part of the course.
+EXCLUDES=(--exclude=.git --exclude=.devcontainer --exclude=__pycache__ --exclude='*.pyc'
           --exclude=share/build --exclude=slides/build --exclude=.env
           --exclude='datasets/*/generated' --exclude='datasets/*/*/generated')
+# Host-only files the authoring repo never carries (git-ignored secrets and the license). Excluded
+# on the host side too, so --delete cannot remove them: without this, one sync took out the LLM
+# token and every seat's Gravwell license.
+PROTECT="--exclude=instructor/runbook/gravwell-llm.env --exclude=gravwell.license --exclude='*.license'"
 
 echo "==> $REPO  ->  $HOST:$DEST"
+# What is on the host, for preflight and for the next person: the authoring commit, and whether the
+# working tree had uncommitted changes when it was shipped.
+rev="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+[ -z "$(git -C "$REPO" status --porcelain 2>/dev/null)" ] || rev="$rev+dirty"
+printf '%s %s\n' "$rev" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$REPO/.sync-rev"
+trap 'rm -f "$REPO/.sync-rev"' EXIT
 tar -cz "${EXCLUDES[@]}" -C "$REPO" . | ssh "$HOST" "
     set -e
     tmp=\$(mktemp -d /opt/workshop/.sync.XXXXXX)
@@ -38,11 +49,16 @@ tar -cz "${EXCLUDES[@]}" -C "$REPO" . | ssh "$HOST" "
     tar -xz --no-same-owner -C \"\$tmp\"
     install -d -m 750 '$DEST'
     # -i itemizes, so a dry run actually tells you what would change
-    rsync -ai --delete --exclude='datasets/*/generated' --exclude='datasets/*/*/generated' $DRY --chown=root:root \"\$tmp/\" '$DEST/' | sed 's/^/    /' | tail -25
+    rsync -ai --delete --exclude='datasets/*/generated' --exclude='datasets/*/*/generated' $PROTECT $DRY --chown=root:root \"\$tmp/\" '$DEST/' > \"\$tmp.log\"
+    # every deletion in full (the itemized list is cut, deletions never are)
+    grep '^\*deleting' \"\$tmp.log\" | sed 's/^/    /' || true
+    grep -v '^\*deleting' \"\$tmp.log\" | sed 's/^/    /' | tail -25
+    rm -f \"\$tmp.log\"
     if [ -z '$DRY' ]; then
         find '$DEST' -type d -exec chmod 755 {} +
         chmod 750 '$DEST'      # the tree itself is root-only; seats never read the authoring copy
         find '$DEST' -type f -exec chmod 644 {} +
+        chmod 600 '$DEST/instructor/runbook/gravwell-llm.env' 2>/dev/null || true   # a token: root-only
         # Anything with a shebang is a script. (Matching *.sh/*.py by name silently stripped +x from
         # Lab 01b's *.bash files: 'Permission denied' on every seat.)
         { grep -rlZ --exclude-dir=.git '^#!' '$DEST' || true; } | xargs -0 -r chmod 755

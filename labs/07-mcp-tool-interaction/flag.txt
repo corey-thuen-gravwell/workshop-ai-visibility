@@ -1,0 +1,5 @@
+<14>1 2026-10-17T14:02:11Z vault-prod-1 vault 2211 - - audit type=response auth.display_name=svc-billing request.path=secret/data/moneyprinter/stripe_live_key request.remote_address=10.13.42.7 response.data.value=FLAG{stripe_live_7a3c9e1f}
+<14>1 2026-10-17T14:02:19Z vault-prod-1 vault 2211 - - audit type=response auth.display_name=svc-api request.path=secret/data/moneyprinter/db_password request.remote_address=10.13.42.9 response.data.value=FLAG{db_pass_4b2d8c0a}
+<14>1 2026-10-17T14:03:04Z vault-prod-1 vault 2211 - - audit type=response auth.display_name=svc-api request.path=secret/data/moneyprinter/jwt_signing_key request.remote_address=10.13.42.9 response.data.value=FLAG{jwt_hs256_e91f33ab}
+<14>1 2026-10-17T14:05:40Z vault-prod-1 vault 2211 - - audit type=response auth.display_name=hr-export request.path=secret/data/hr/payroll_export_token request.remote_address=10.13.42.31 response.data.value=FLAG{payroll_tok_5d6e7f80}
+<14>1 2026-10-17T14:06:02Z vault-prod-1 vault 2211 - - audit type=response auth.display_name=secops request.path=secret/data/ir/cherdenko_watchlist request.remote_address=10.13.42.50 response.data.value=FLAG{cherdenko_l3ft_0rb1t}

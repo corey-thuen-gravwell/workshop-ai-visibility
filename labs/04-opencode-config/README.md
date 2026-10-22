@@ -12,9 +12,10 @@ with that record even when it's complete.
 
 ## Setup
 - Your Gravwell stack is up (Lab 00).
-- `opencode` is installed system-wide on the lab host.
+- `opencode` is installed system-wide on the lab host. Working alone, install it yourself
+  (self-study guide section 3; a static binary, no node needed).
 - Your seat's `~/.workshop_env` holds the class Anthropic key as `ANTHROPIC_API_KEY` (a short-lived
-  key that is revoked when the class ends).
+  key that is revoked when the class ends). Working alone, it holds your own key (`SETUP.md`).
 
 ## Part 1: Configure the agent
 

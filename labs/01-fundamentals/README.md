@@ -11,6 +11,11 @@ No sessions, no cookies, no server-side conversation.
 
 ## Setup
 No Gravwell, no proxy, nothing in the middle, just `curl` straight at the provider.
+**Seat check, if you just sat down.** SSH to `workshop<ID>@<lab-host>` with the seat number and
+password the instructor gave you, then `echo $WORKSHOPUID`; if it prints nothing, run
+`. ~/.workshop_env`. Working alone on your own machine? `SETUP.md` at the repo root sets the same
+variables.
+
 Set your endpoint and key once:
 
 ```bash

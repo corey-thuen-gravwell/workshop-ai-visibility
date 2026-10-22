@@ -104,17 +104,24 @@ docs don't spell out are recorded in `instructor/runbook/gravwell-provisioning.m
   non-Gravwell shops and students are meant to read and extend it.
 - The Gravwell-native path is the official `gravwell/llm_ingester` image, wired as a sidecar in
   the Lab 00 compose. Its listener config is `labs/00-environment-gravwell/config/llm_ingester.conf`.
-- The MCP labs use the benign, config-driven server in `src/mcp-lab-server/`. Keep examples
-  observable (a tool that reads, counts, reformats); the material teaches how tool manifests steer
-  a model and how to see that in telemetry, with "what would the attacker version look like" left
-  as discussion.
+- The MCP labs use the config-driven server in `src/mcp-lab-server/`. Lab 06's examples are
+  benign tools that read, count and reformat. Lab 07 plays the attacker on purpose, because a room
+  that only saw the benign version did not make the jump to "this steals": the `exfiltrate`
+  behaviour and the `loot_file` option keep what the model hands a tool, and the lab's manifest
+  makes the model fetch a planted secret tag (`tag=flag`, five `FLAG{...}` lines) with Gravwell's
+  own MCP tools. Keep it that way: the attack must stay **observable and local** (loot goes to a
+  file in the student's home, never over the network; the target is the planted flag, never
+  `tag=llm` or a mutating Gravwell tool), and every attack task has a matching detection task in
+  Part 3. Nastier variants (the prompts of the whole room, persistence via `create_*` tools) stay
+  as "write the sentence down, do not run it".
 - Everything student-facing runs over SSH and in the terminal.
 - Per-attendee ports derive from `WORKSHOPUID` (10–49). Don't hardcode ports; template on the id.
   The port map lives in `AGENDA.md`.
 - Gravwell tags in use: `corelight_dns` / `corelight_ssl` / `corelight_conn` / `corelight_http`,
   `sysmon`, `okta`, `logbot`, `syslog` (litellm container logs, raw text), `llm` (Gravwell LLM
-  ingester), `proxy` (vendor-agnostic Python proxy), `mcp` (the student's own MCP lab server), and
-  for the beyond-the-wire lab `osquery`, `swg`, `cloudtrail`, `gws`. Reuse these names.
+  ingester), `proxy` (vendor-agnostic Python proxy), `mcp` (the student's own MCP lab server),
+  `flag` (the Lab 07 planted secrets), and for the beyond-the-wire lab `osquery`, `swg`,
+  `cloudtrail`, `gws`. Reuse these names.
 - LLM event schema: both LLM log sources emit the same `event_type` vocabulary
   (`request.user_message`, `request.system_message`, `request.tool_result`,
   `response.assistant_message`, `response.tool_call`, `response.usage`, …). The ingester exposes

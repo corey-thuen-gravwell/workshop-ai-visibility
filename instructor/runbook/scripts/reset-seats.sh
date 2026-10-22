@@ -20,7 +20,12 @@
 #   SEATS=1 START_ID=29 ./reset-seats.sh
 set -uo pipefail
 
-SEATS="${SEATS:-2}"; START_ID="${START_ID:-10}"; END_ID="${END_ID:-$((START_ID + SEATS - 1))}"
+ENV_FILE="${ENV_FILE:-/opt/workshop/.env}"
+# The operator's SEATS/START_ID/END_ID win; otherwise the class size comes from $ENV_FILE (as in
+# makeuser.sh); otherwise 2 seats from id 10.
+_cli_seats="${SEATS:-}"; _cli_start="${START_ID:-}"; _cli_end="${END_ID:-}"
+[ -f "$ENV_FILE" ] && { set -a; . "$ENV_FILE" 2>/dev/null; set +a; }
+SEATS="${_cli_seats:-${SEATS:-2}}"; START_ID="${_cli_start:-${START_ID:-10}}"; END_ID="${_cli_end:-${END_ID:-$((START_ID + SEATS - 1))}}"
 REPO_PATH="${REPO_PATH:-/opt/gitsrv/jarvis.git}"
 DRY=""; [ "${1:-}" = "--dry-run" ] && DRY=1
 
@@ -75,5 +80,6 @@ for i in $(seq "$START_ID" "$END_ID"); do
 done
 echo "reset $((END_ID - START_ID + 1)) seats: $total_c containers and $total_f home items removed"
 echo "  $ok/$((END_ID - START_ID + 1)) seats have a working ~/jarvis clone"
-strays=$(docker ps -aq --filter "name=^[0-9]" 2>/dev/null | wc -l)
-echo "  $strays seat container(s) remaining (want 0)"
+strays=0
+for i in $(seq "$START_ID" "$END_ID"); do strays=$((strays + $(docker ps -aq --filter "name=^${i}" 2>/dev/null | wc -l))); done
+echo "  $strays container(s) remaining on seats $START_ID-$END_ID (want 0; the P3 demo seat and out-of-range seats are not counted)"

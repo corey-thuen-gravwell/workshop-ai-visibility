@@ -74,6 +74,8 @@ rest. Remember its address; you will meet it again at the end of this lab, from 
 The kit also installed two dozen Corelight dashboards (**Dashboards** in the left nav). Look at one.
 Everything on it is a saved query over this same raw data.
 
+## Upload the two lookups
+
 - Upload the two lookup files as Gravwell **resources**. Methods 1, 2 and 4 and the correlation
   query all fail without them.
 
@@ -85,7 +87,8 @@ Everything on it is a saved query over this same raw data.
   ```bash
   cd ~/jarvis
   ./labs/02-shadow-ai/upload-resource.sh AI_DOMAINS          datasets/resources/ai_domains.txt
-  ./labs/02-shadow-ai/upload-resource.sh AI_DOMAINS_PLUS_API datasets/resources/ai_domains_plus_api.txt
+  ./labs/02-shadow-ai/upload-resource.sh AI_DOMAINS_PLUS_API \
+      datasets/resources/ai_domains_plus_api.txt
   ```
   The names must match exactly, the searches reference them. `AI_DOMAINS` is a browser-facing
   blocklist that does **not** contain provider API hosts; `AI_DOMAINS_PLUS_API` adds them. Which
@@ -139,10 +142,6 @@ Now yours:
 
 You have every module you need in Methods 1 and 2. Method 3 has no list to match, so drop the
 `lookup` and just look at what hosts and paths come back. Method 4 changes the tag and the fields.
-
-> **Note the two different lookups.** `AI_DOMAINS` is a browser-facing blocklist, it does **not**
-> contain provider API hosts like `api.anthropic.com`. `AI_DOMAINS_PLUS_API` adds them. Which
-> method you point at which list changes what you find, and that is not an accident.
 
 ## The correlation query: DNS joined to connections (the whole point)
 
@@ -202,14 +201,15 @@ Write down your answers: you will need some of them again in Lab 03.
    of the night, and connects to none of them. What kind of machine does that?*
 2. **Start from the correlation query.** Its output is the list of hosts that moved bytes to an IP
    they themselves resolved as an AI domain. **Write down those hosts.** This is the most trustworthy
-   list in the lab, and it still **misses two hosts that really are using AI.** Tasks 3–6 find
-   them. Which two, and why they are invisible, is the actual lesson.
+   list in the lab, and it still **misses two hosts that really are using AI.** Tasks 4 and 6 find
+   them (3 and 5 are two other ways a single method lies). Which two, and why they are invisible,
+   is the actual lesson.
 3. One host in the correlation results has `service=quic` and **never appears in the SNI
    results**. **Why is it invisible to SNI?** *Hint: what does the SNI query read, and does that
    field exist for this protocol?*
-4. One host in the correlation results reaches `api.anthropic.com` but is **absent from the DNS
-   results entirely**. **How is it resolving names?** *Hint: look at the one DNS query it did
-   make.*
+4. One host in the **SNI** results reaches `api.anthropic.com` but is **absent from the DNS
+   results entirely**, so the correlation query cannot see it either. **How is it resolving
+   names?** *Hint: look at the one DNS query it did make.*
 5. `legal-lt-77` connects to `104.18.32.47`: the same address `chatgpt.com` resolves to. **Is this
    AI usage?** Check its SNI, and check whether *it* ever resolved chatgpt.com. *Hint: how many
    different sites can share one CDN address?*
@@ -224,6 +224,17 @@ Write down your answers: you will need some of them again in Lab 03.
    *Hint: `169.254.169.254` is not on the internet.*
    **Write the host and the window down.** You will meet this same eight minutes again in Lab 03,
    from a completely different log source.
+
+## Discussion
+- A single signal is not usage. The loudest DNS host connected to nothing; the host sharing a CDN
+  address with `chatgpt.com` never asked for it. Which of your own detections fire on one signal?
+- The correlation query is the most trustworthy list you will build from network data, and it
+  still missed two of seven real users: one that resolves names somewhere you cannot see, one on
+  a protocol that carries no server name. What would it take to see those two?
+- You have four log sources and nothing else. What can you honestly tell your CISO? You can name
+  hosts that **probably** used AI, spot volume anomalies, and find a self-hosted model. You cannot
+  say what any of them **sent**. Not one prompt. That gap is what M6 names, and what the whole
+  proxy half of the course exists to close.
 
 ## About the data
 The five files are generated: the record formats are real Zeek/Corelight and Okta, the scenario is

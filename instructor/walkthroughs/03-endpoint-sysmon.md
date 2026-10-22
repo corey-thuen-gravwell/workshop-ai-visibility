@@ -3,7 +3,7 @@
 > ⛔ **INSTRUCTOR ONLY.** Contains every answer and every query. Student handout:
 > [`labs/03-endpoint-sysmon/README.md`](../../labs/03-endpoint-sysmon/README.md).
 
-**Module:** M5 + Lab C · **Budget:** 105 min (the longest module in the course)
+**Module:** M5 + Lab 03 · **Budget:** 105 min (the longest module in the course)
 **Checkpoint:** `stage-sysmon` (`git checkout stage-sysmon -- labs/03-endpoint-sysmon`) · **Flex:** 🔒 core
 **Deck:** [`slides/04-sysmon.md`](../../slides/04-sysmon.md)
 **Data:** real, 3,599 Linux-Sysmon events from an actual opencode session, re-timed onto the Lab 02
@@ -99,7 +99,7 @@ original capture `datasets/sysmon/sysmon-events-jan21-clean.xml`.
 |---:|---|
 | 0–25 | Slides: why agents look different on an endpoint; process-tree shape |
 | 25–32 | Ingest, confirm the tag, `xml` vs `winlog` side by side |
-| 32–42 | Install the Sysmon kit; dashboard is empty; fix the `PROVIDER` macro; it fills |
+| 32–40 | Install the Sysmon kit; dashboard is empty; fix the `PROVIDER` macro; it fills |
 | 40–52 | Task 1: cluster by parent, find the high spawners |
 | 52–60 | Task 2: the race condition (the "wait, that's broken" moment) |
 | 60–72 | Task 3: what it spawned |

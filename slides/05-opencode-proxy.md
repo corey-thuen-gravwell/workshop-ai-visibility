@@ -76,11 +76,12 @@ Two of them, same event model:
 ## opencode → your proxy
 
 ```jsonc
-// ~/.config/opencode/opencode.json: Anthropic-native, via the ingester's :4181 listener
-{ "provider": { "anthropic": { "options": { "baseURL": "http://localhost:<ID>81" } } } }
+// ~/moneyprinter/opencode.json (the project file, not ~/.config): Anthropic-native,
+// via the ingester's <ID>81 listener. The /v1 is not optional: without it, 404.
+{ "provider": { "anthropic": { "options": { "baseURL": "http://localhost:<ID>81/v1" } } } }
 ```
 ```jsonc
-// …or OpenAI-compatible, via :4180 (or the Python proxy on <ID>90)
+// …or OpenAI-compatible, via <ID>80 (or the Python proxy on <ID>90), same /v1 rule
 "provider": { "myprovider": {
   "npm": "@ai-sdk/openai-compatible",
   "options": { "baseURL": "http://localhost:<ID>80/v1" },

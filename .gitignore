@@ -36,3 +36,6 @@ __pycache__/
 # Credentials supplied per deployment (see SETUP.md)
 gravwell.license
 instructor/runbook/gravwell-llm.env
+# The self-signed TLS pair a solo reader generates for Lab 00 (SETUP.md section 4). The whole
+# directory ships in stage-gravwell, so an unignored key.pem would go to every seat.
+labs/00-environment-gravwell/config/*.pem

@@ -135,4 +135,4 @@ no branch switching, no detached HEAD, nothing else touched. Ask an instructor i
 - Task 5's rule names no process and no signature: it describes a *shape*. What does that buy you
   against an agent that does not exist yet, and what does it cost you on a build server?
 - Network or Endpoint logs can indicate AI activity but cannot tell you
-  you **what the agent sent to the model**. That's what the rest of the course is about.
+  **what the agent sent to the model**. That's what the rest of the course is about.

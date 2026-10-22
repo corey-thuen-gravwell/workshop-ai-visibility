@@ -65,7 +65,7 @@ Date, actor, app name, "Feature utilization," "classic_use_case_gemini_app." Who
 > **How do we identify AI usage from the logs we (should) already have?**
 
 - **NDR**: network detection & response (Zeek / Corelight)
-- **SDR / EDR**: endpoint (Sysmon)
+- **EDR / XDR**: endpoint (Sysmon)
 
 No vendor cooperation required. Just the telemetry you already collect.
 

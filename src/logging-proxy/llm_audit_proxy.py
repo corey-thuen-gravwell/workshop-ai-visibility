@@ -9,6 +9,7 @@ against either source:
 
     request.system_message    the system prompt
     request.user_message      the newest user turn (delta mode) or every message (full mode)
+    request.assistant_message an earlier assistant turn the client re-sent (full mode only)
     request.tool_result       a tool result the client sent back to the model
     request.tools_offered     the tool list the client advertised (name + description), the
                               "what could this agent do?" record the vendor never gives you
@@ -16,7 +17,7 @@ against either source:
     response.reasoning        exposed reasoning/thinking, when present
     response.tool_call        a tool the model asked to run, with arguments
     response.usage            token accounting
-    proxy.error               upstream failure / parse failure (never silently dropped)
+    proxy.error               upstream failure / parse failure / client hung up (never silently dropped)
 
 Protocols: OpenAI Chat Completions (/v1/chat/completions) and Anthropic Messages (/v1/messages),
 streaming (SSE) and buffered. Anything else on the allowed-path list is forwarded and logged as
@@ -28,13 +29,18 @@ Splunk TCP, anything that eats newline-delimited JSON), UDP syslog (RFC 5424 wit
     export OPENAI_BASE_URL=http://localhost:1290/v1   ANTHROPIC_BASE_URL=http://localhost:1290
 
 The client's own credentials pass through untouched unless --upstream-key is set, in which case
-the real key stays in the proxy and clients present whatever (or --client-key gates them).
+the real key stays in the proxy and clients present whatever (or --client-key gates them). Prefer
+the environment variable PROXY_UPSTREAM_KEY to the flag: argv is readable by every user on the
+box (`ps`), the environment of a process is not.
 """
-import argparse, base64, datetime as dt, hashlib, http.client, json, os, socket, ssl, sys, threading, time, uuid
+import argparse, datetime as dt, hashlib, http.client, json, os, socket, ssl, sys, threading, time, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
+# Hop-by-hop headers are not forwarded. `accept-encoding` is dropped on purpose: the upstream then
+# answers uncompressed, so the side copy this proxy keeps is parseable (the response's
+# `content-encoding` is dropped on the way back for the same reason).
 HOP_HEADERS = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailers",
                "transfer-encoding", "upgrade", "host", "content-length", "accept-encoding"}
 DEFAULT_ALLOWED = ["/v1/chat/completions", "/v1/messages", "/v1/messages/count_tokens", "/v1/models",
@@ -109,7 +115,16 @@ def parse_request(protocol, body, log_mode):
         system_text = "\n".join(text_of(m.get("content")) for m in msgs if m.get("role") in ("system", "developer"))
     if system_text: ev.append({"event_type": "request.system_message", "role": "system", "data": system_text})
     # user / tool-result messages
-    chosen = msgs if log_mode == "full" else msgs[-1:]  # delta: only the newest message is new information
+    if log_mode == "full":
+        chosen = msgs
+    else:
+        # delta: only the newest message is new information. An OpenAI-style client answering several
+        # tool calls at once sends one `tool` message per result, all of them new, so take the whole
+        # trailing run of them rather than the last one alone.
+        i = len(msgs)
+        while i > 0 and (msgs[i - 1].get("role") == "tool"):
+            i -= 1
+        chosen = msgs[i:] if i < len(msgs) else msgs[-1:]
     for m in chosen:
         role = m.get("role"); content = m.get("content")
         if role in ("system", "developer"): continue
@@ -195,7 +210,11 @@ class ResponseAccumulator:
                 elif dtp == "input_json_delta" and obj.get("index") in self.tools: self.tools[obj["index"]]["arguments"] += d.get("partial_json", "")
             elif t == "message_delta":
                 self.stop = (obj.get("delta") or {}).get("stop_reason")
-                if obj.get("usage"): (self.usage or {}).update(obj["usage"]) if self.usage is not None else None; self.usage = self.usage or obj["usage"]
+                if obj.get("usage"):
+                    # message_start carried input_tokens; message_delta carries output_tokens. Merge.
+                    if self.usage is None:
+                        self.usage = {}
+                    self.usage.update(obj["usage"])
     def events(self):
         ev = []
         if self.reasoning: ev.append({"event_type": "response.reasoning", "role": "assistant", "data": "".join(self.reasoning)})
@@ -227,8 +246,16 @@ class Proxy(BaseHTTPRequestHandler):
 
     def do_GET(self): self._handle(b"")
     def do_POST(self):
-        n = int(self.headers.get("content-length") or 0)
-        if n > self.server.args.max_body: return self._reply(413, {"error": "request body too large"})
+        try:
+            n = int(self.headers.get("content-length") or 0)
+        except ValueError:
+            self.close_connection = True
+            return self._reply(400, {"error": "content-length is not a number"})
+        if n > self.server.args.max_body:
+            # The body is left unread, so this connection cannot carry another request: close it,
+            # or the unread bytes get parsed as the next request line.
+            self.close_connection = True
+            return self._reply(413, {"error": "request body too large"})
         self._handle(self.rfile.read(n) if n else b"")
 
     def _reply(self, code, obj):
@@ -285,29 +312,39 @@ class Proxy(BaseHTTPRequestHandler):
         self.send_response(resp.status)
         for k, v in resp.getheaders():
             if k.lower() not in HOP_HEADERS and k.lower() != "content-encoding": self.send_header(k, v)
-        raw = b""
-        if streaming:
-            self.send_header("transfer-encoding", "chunked"); self.end_headers(); buf = b""
-            while True:
-                chunk = resp.read1(8192) if hasattr(resp, "read1") else resp.read(8192)
-                if not chunk: break
-                self.wfile.write(b"%x\r\n%s\r\n" % (len(chunk), chunk)); self.wfile.flush()
-                if acc:
-                    buf += chunk
-                    while b"\n\n" in buf:
-                        frame, buf = buf.split(b"\n\n", 1)
-                        for line in frame.decode("utf-8", "replace").splitlines():
-                            if line.startswith("data:"): acc.from_sse_data(line[5:].strip())
-            self.wfile.write(b"0\r\n\r\n"); self.wfile.flush()
-        else:
-            raw = resp.read(); self.send_header("content-length", str(len(raw))); self.end_headers(); self.wfile.write(raw)
-            if acc and resp.status < 400:
-                try: acc.from_json(json.loads(raw))
-                except ValueError as e: self.server.sinks.emit({**env, "event_type": "proxy.error", "data": f"response not JSON: {e}"})
-        conn.close()
+        raw = b""; client_gone = None
+        # The client can hang up at any point while the response is being relayed (Ctrl-C in an
+        # agent mid-answer is exactly this). Everything accumulated so far is still evidence, so a
+        # disconnect is logged as a proxy.error and followed by whatever events we did assemble.
+        try:
+            if streaming:
+                self.send_header("transfer-encoding", "chunked"); self.end_headers(); buf = b""
+                while True:
+                    chunk = resp.read1(8192) if hasattr(resp, "read1") else resp.read(8192)
+                    if not chunk: break
+                    if acc:
+                        buf += chunk
+                        while b"\n\n" in buf:
+                            frame, buf = buf.split(b"\n\n", 1)
+                            for line in frame.decode("utf-8", "replace").splitlines():
+                                if line.startswith("data:"): acc.from_sse_data(line[5:].strip())
+                    self.wfile.write(b"%x\r\n%s\r\n" % (len(chunk), chunk)); self.wfile.flush()
+                self.wfile.write(b"0\r\n\r\n"); self.wfile.flush()
+            else:
+                raw = resp.read()
+                if acc and resp.status < 400:
+                    try: acc.from_json(json.loads(raw))
+                    except ValueError as e: self.server.sinks.emit({**env, "event_type": "proxy.error", "data": f"response not JSON: {e}"})
+                self.send_header("content-length", str(len(raw))); self.end_headers(); self.wfile.write(raw)
+        except OSError as e:
+            client_gone = e; self.close_connection = True
+        finally:
+            conn.close()
         dur = int((time.monotonic() - t0) * 1000)
         tail = {**env, "upstream_status": resp.status, "duration_ms": dur, "request_id": (acc.request_id if acc else None) or resp.getheader("x-request-id"),
                 "model": (acc.model if acc and acc.model else env["model"]), "stop_reason": acc.stop if acc else None}
+        if client_gone:
+            self.server.sinks.emit({**tail, "event_type": "proxy.error", "data": f"client disconnected mid-response: {client_gone}; events below are what had arrived"})
         if not proto:
             self.server.sinks.emit({**tail, "event_type": "proxy.passthrough", "data": ""}); return
         if resp.status >= 400:
@@ -318,8 +355,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--listen", default=os.environ.get("PROXY_LISTEN", "127.0.0.1:1290"), help="host:port to listen on")
     ap.add_argument("--upstream", default=os.environ.get("PROXY_UPSTREAM", "https://api.anthropic.com"), help="provider base URL")
-    ap.add_argument("--upstream-key", default=os.environ.get("PROXY_UPSTREAM_KEY"), help="inject this API key upstream (else pass client's through)")
-    ap.add_argument("--client-key", default=os.environ.get("PROXY_CLIENT_KEY"), help="require clients to present this key")
+    ap.add_argument("--upstream-key", default=os.environ.get("PROXY_UPSTREAM_KEY"), help="inject this API key upstream (else pass client's through). Prefer the PROXY_UPSTREAM_KEY env var: argv is visible to every user in `ps`")
+    ap.add_argument("--client-key", default=os.environ.get("PROXY_CLIENT_KEY"), help="require clients to present this key (or PROXY_CLIENT_KEY)")
     ap.add_argument("--log-mode", choices=["delta", "full"], default="delta", help="delta: newest message only; full: every message every request")
     ap.add_argument("--session-header", default="x-claude-code-session-id", help="client header carrying a conversation id")
     ap.add_argument("--log-file", help="append JSONL events here")

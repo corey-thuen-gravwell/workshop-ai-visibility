@@ -35,7 +35,7 @@ labs/03-endpoint-sysmon/README.md|labs/03-endpoint-sysmon|Lab 03: Endpoint detec
 labs/04-opencode-config/README.md|labs/04-opencode-config|Lab 04: The AI user & opencode config|Module M7
 labs/05-llm-proxy/README.md|labs/05-llm-proxy|Lab 05: LLM proxies|Modules M8 & M9
 labs/06-mcp-deep-dive/README.md|labs/06-mcp-deep-dive|Lab 06: MCP deep dive|Module M10
-labs/07-mcp-tool-interaction/README.md|labs/07-mcp-tool-interaction|Lab 07: MCP tool interaction across servers|Modules M11 & M12
+labs/07-mcp-tool-interaction/README.md|labs/07-mcp-tool-interaction|Lab 07: A malicious MCP server, and how to catch it|Modules M11 & M12
 labs/_stretch/ai-assistant-audit/README.md|labs/p8-ai-assistant-audit|Audit an AI assistant from its own logs|Padding module P8
 labs/_stretch/shadow-ai-sources/README.md|labs/p9-shadow-ai-sources|Shadow AI beyond the wire|Padding module P9
 labs/_stretch/extend-the-proxy/README.md|labs/p2-extend-the-proxy|Vibe-code your own proxy|Padding module P2
@@ -59,7 +59,7 @@ instructor/walkthroughs/03-endpoint-sysmon.md|walkthroughs/03-endpoint-sysmon|La
 instructor/walkthroughs/04-opencode-config.md|walkthroughs/04-opencode-config|Lab 04: The AI user & opencode config|Complete walkthrough
 instructor/walkthroughs/05-llm-proxy.md|walkthroughs/05-llm-proxy|Lab 05: LLM proxies|Complete walkthrough
 instructor/walkthroughs/06-mcp-deep-dive.md|walkthroughs/06-mcp-deep-dive|Lab 06: MCP deep dive|Complete walkthrough
-instructor/walkthroughs/07-mcp-tool-interaction.md|walkthroughs/07-mcp-tool-interaction|Lab 07: MCP tool interaction across servers|Complete walkthrough
+instructor/walkthroughs/07-mcp-tool-interaction.md|walkthroughs/07-mcp-tool-interaction|Lab 07: A malicious MCP server, and how to catch it|Complete walkthrough
 instructor/walkthroughs/_stretch-ai-assistant-audit.md|walkthroughs/p8-ai-assistant-audit|Audit an AI assistant from its own logs|Complete walkthrough
 instructor/walkthroughs/_stretch-extend-the-proxy.md|walkthroughs/p2-extend-the-proxy|Vibe-code your own proxy|Complete walkthrough
 instructor/walkthroughs/_stretch-second-client.md|walkthroughs/p4-second-client|A second client through the same proxy|Complete walkthrough
@@ -79,7 +79,7 @@ repo, maxw, *files = sys.argv[1:]; maxw = int(maxw); bad = 0
 for f in files:
     fence = False
     for n, line in enumerate(open(f"{repo}/{f}", encoding="utf-8"), 1):
-        if line.startswith("```"): fence = not fence; continue
+        if line.lstrip().startswith("```"): fence = not fence; continue   # indented fences (list items) count too
         w = len(line.rstrip("\n"))
         if fence and w > maxw:
             print(f"  {f}:{n}: {w} chars (max {maxw}), a PDF viewer would wrap this mid-command"); bad += 1
@@ -116,7 +116,7 @@ if kind == "walkthrough":
               "Every command, every expected result, and the answer to every task. It is written "
               "for whoever is teaching, so it also contains notes about how the lab is meant to "
               "land. If you are working through the lab yourself, the handout is the one you want "
-              "&mdash; this is the safety net.</div>")
+              ": this is the safety net.</div>")
 doc = f"""<div class="{cls}"><p class="course">{H.escape(course)}</p>
 <h1>{H.escape(title)}</h1><p class="sub">{H.escape(sub)}</p></div>
 {banner}

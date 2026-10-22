@@ -15,7 +15,8 @@ and what it answered**: the content the vendor dashboards never give you.
 **Same event vocabulary on both**, so one set of searches teaches the concept regardless of SIEM:
 `request.system_message`, `request.user_message`, `request.tool_result`, `response.assistant_message`,
 `response.reasoning`, `response.tool_call`, `response.usage` (+ proxy-only `request.tools_offered`,
-`proxy.passthrough`, `proxy.error`). Common fields: `model`, `session_id`, `tool_name`,
+`request.assistant_message` in `--log-mode full`, `proxy.passthrough`, `proxy.error`, which also
+records a client that hung up mid-response, followed by whatever events had arrived). Common fields: `model`, `session_id`, `tool_name`,
 `tool_call_id`, `prompt_tokens`, `completion_tokens`, `upstream_status`, `duration_ms`, `stream`.
 
 ## The Gravwell LLM ingester
@@ -59,7 +60,8 @@ export OPENAI_BASE_URL=http://localhost:${WORKSHOPUID}90/v1     # OpenAI-style c
 export ANTHROPIC_BASE_URL=http://localhost:${WORKSHOPUID}90      # Anthropic SDK / Claude Code
 
 # other sinks: --stdout · --syslog siem.example.com:514 (RFC 5424 UDP, JSON as the message)
-# hide the real key behind the proxy: --upstream-key "$ANTHROPIC_API_KEY" --client-key some-shared-token
+# hide the real key behind the proxy (key in the environment, never argv: `ps` shows argv to every user):
+#   PROXY_UPSTREAM_KEY="$ANTHROPIC_API_KEY" ./llm_audit_proxy.py ... --client-key some-shared-token
 # full transcript every request instead of just the new turn: --log-mode full
 ```
 

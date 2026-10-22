@@ -9,7 +9,9 @@ what an MCP server can make a model do.
 ## Objective
 Speak MCP by hand. No agent, no model, just `curl` and JSON-RPC against a **real MCP server you
 own**: the one built into your own Gravwell. By the end you'll have done everything an AI client
-does, and seen exactly what's on the wire for a proxy to capture.
+does, and seen exactly what's on the wire for a proxy to capture. Then write a server of your own
+from a config file, connect a real agent to it, and change one sentence in a tool description to
+watch the agent's behaviour change with no code edited: the manifest is the lesson.
 
 ## Background
 MCP is JSON-RPC 2.0 over one HTTP endpoint. Three roles: the **host** (the AI app), the **client**
@@ -149,7 +151,7 @@ less examples/looney-tunes-compliance.toml        # q to quit
 You want `OK`, `tools: 3`, and the three tool names.
 
 **2. Start it, in a second terminal.** Like the proxy in Lab 05 it is a server: it stays in the
-foreground until you `Ctrl-C` it. Open another SSH window to your seat and run:
+foreground until you `Ctrl-C` it. Open a second terminal (another SSH session to the box) and run:
 
 ```bash
 cd ~/jarvis/src/mcp-lab-server
@@ -363,7 +365,7 @@ jq -r '.mcp["looney-tunes"].command[]' opencode.json | grep lt.toml    # prints 
 ## Task 9: Build your own
 
 ```bash
-cp examples/starter-template.toml ~/my-server.toml
+cp ~/jarvis/src/mcp-lab-server/examples/starter-template.toml ~/my-server.toml
 ```
 
 Make a server with **at least two tools** that does something you'd actually find useful, a naming
@@ -394,8 +396,9 @@ tag=mcp json method message | grep -e method tools/call | table message
 3. Compare this to `tag=llm` from Lab 05: one is the model's conversation, the other is the tool
    side. **Which questions need both?**
 
-> **Next lab.** One server is a toy. Lab 07 puts Gravwell's own MCP server next to this one and shows
-> what a manifest can make the model do across the two, then finds it in `tag=llm`.
+> **Next lab.** One server is a toy. Lab 07 puts Gravwell's own MCP server next to this one, then has
+> you build the server an attacker would publish: one whose manifest makes the model fetch a secret
+> tag with Gravwell's tools and hand it over. Then you find the theft in `tag=llm`.
 
 ## Discussion
 - Everything you just did, tools offered, tool chosen, arguments, result, was **plain JSON over

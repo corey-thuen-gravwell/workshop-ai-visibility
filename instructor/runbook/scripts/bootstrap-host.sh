@@ -144,6 +144,7 @@ fi
 
 log "Firewall (ssh + seat port ranges), enable with: ufw enable"
 ufw allow 22/tcp >/dev/null
+ufw allow 80,443/tcp >/dev/null          # the share site behind Traefik, and its HTTP-01 cert renewals
 ufw allow 10000:49999/tcp >/dev/null     # <ID>xxx per-seat ports (10-49 prefix)
 ufw allow 10000:49999/udp >/dev/null     # <ID>514 syslog
 ufw default deny incoming >/dev/null; ufw default allow outgoing >/dev/null

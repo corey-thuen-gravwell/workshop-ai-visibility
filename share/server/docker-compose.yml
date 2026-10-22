@@ -1,7 +1,11 @@
-# Workshop share server: nginx serving live/ over HTTPS with basic auth.
+# Workshop share server: nginx serving live/ with basic auth, behind the host's Traefik.
 #
-# Everything it needs is a bind mount, so this is portable: point SHARE_ROOT and WORKSHOP_CERT_DIR
-# somewhere else and it runs anywhere docker does. Nothing is baked into an image.
+# The lab host already runs Traefik on :80/:443 (/opt/webstack/stack), so this container publishes
+# no ports. It joins Traefik's network and is routed by Host(SHARE_HOST); Traefik terminates TLS
+# with its own Let's Encrypt cert (HTTP-01) and redirects http -> https. nginx speaks plain HTTP.
+#
+# Everything it needs is a bind mount, so this is portable: point SHARE_ROOT somewhere else and it
+# runs anywhere docker + that Traefik does. Nothing is baked into an image.
 #
 # Brought up by instructor/runbook/scripts/start-share-server.sh, which also writes .htpasswd.
 #
@@ -15,12 +19,18 @@ services:
     image: nginx:alpine
     container_name: workshop-share
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
+    networks: [edge]
     volumes:
       - ${SHARE_ROOT:-/opt/workshop/share}/live:/srv/share:ro
       - ${SHARE_CONF:-./nginx.conf}:/etc/nginx/conf.d/default.conf:ro
       - ${SHARE_ROOT:-/opt/workshop/share}/.htpasswd:/etc/nginx/.htpasswd:ro
-      - ${WORKSHOP_CERT_DIR:-/opt/workshop/certs}/cert.pem:/certs/cert.pem:ro
-      - ${WORKSHOP_CERT_DIR:-/opt/workshop/certs}/key.pem:/certs/key.pem:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.workshop-share.rule=Host(`${SHARE_HOST:?set SHARE_HOST, e.g. share.jarvis.gravwell.space}`)
+      - traefik.http.routers.workshop-share.entrypoints=websecure
+      - traefik.http.services.workshop-share.loadbalancer.server.port=80
+
+networks:
+  edge:
+    name: ${TRAEFIK_NETWORK:-webstack-edge}
+    external: true

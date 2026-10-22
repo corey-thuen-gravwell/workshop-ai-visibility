@@ -7,7 +7,7 @@ doesn't ship to, and a detection it doesn't make. Do it **with the AI agent**, r
 proxy, so the proxy records the conversation in which you modify it.
 
 ## Why this is the point, not a bonus
-The whole Day-2 argument is *"it's all HTTP anyway"*. If that's true, the proxy isn't a product you
+The whole argument of the interception half of the course is *"it's all HTTP anyway"*. If that's true, the proxy isn't a product you
 buy, it's 350 lines of Python you own. This is where you find out whether you believe it.
 
 ## Setup

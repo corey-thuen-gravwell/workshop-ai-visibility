@@ -292,8 +292,9 @@ the wire. Only the SaaS audit log sees it.
 | sales-lt-66 dfoster | cleared | cleared | cleared | - | - | - | **seen (Notion AI, CSV)** | - | seen (notetaker) |
 
 Answers: most blind cells yet biggest exposure → **hr-lt-140/psingh** (blind in every network column
-for the thing that mattered). Blind in *every* network column → **ops-lt-48** (local model) and the
-psingh exposure itself. Needed exactly two sources → **jpark**: CloudTrail shows the enablement,
+for the thing that mattered). Blind in *every* network column → **ops-lt-48** (local model); the *finding* blind to every
+network source while its host read "cleared" → the psingh/hr-lt-140 exposure (505 MB over
+server-to-server OAuth, visible only in the Workspace audit). Needed exactly two sources → **jpark**: CloudTrail shows the enablement,
 Lab 02 / osquery show who he is and what else he runs; or **gmartin**: osquery + the denied calls.
 
 ---

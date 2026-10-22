@@ -13,10 +13,11 @@ same three problems.
 
 | | |
 |---|---|
-| **Time** | Roughly 16 hours of hands-on work, plus setup. Split it however you like; the labs are independent once the environment is up |
-| **Money** | A few dollars of Anthropic API spend. Labs 01, 04, 05, 06 and the P2/P4 stretch labs call a real model. Set a spend limit on the key and forget about it |
+| **Time** | About 18 hours of hands-on work, plus setup. Split it however you like; the labs are independent once the environment is up |
+| **Money** | A few dollars of Anthropic API spend. Labs 01, 04, 05, 06, 07 and the P2/P4 stretch labs call a real model; Lab 07 is the hungriest (an agent samples every tag you have). Set a spend limit on the key and forget about it |
 | **Skills** | Comfortable in a terminal, or willing to become so. You do not need to know Gravwell, MCP, or how an LLM works: that is the course |
-| **Hardware** | One Linux box (or VM) with 4 GB RAM free and ~10 GB disk. Everything runs in docker |
+| **Where** | A Linux VM or machine that you control, with a shell and docker. Creating it (cloud instance, hypervisor, a spare box) is yours; this guide starts once you can log in to it. See §3 for what it needs |
+| **Hardware** | 2 CPUs, 4 GB RAM free and 20 GB disk for the labs; 8 GB RAM if Lab 01b's local model (Ollama) runs on the same box. No GPU needed; the model is small and CPU is fine, just slower |
 
 **Every module is written up.** Nothing in the course depends on material that is not in this
 repository; the walkthroughs stand in for the instructor.
@@ -29,16 +30,18 @@ repository; the walkthroughs stand in for the instructor.
    command, the exact expected output, and the answer to every task. Do not read one before you
    have tried the handout, it defeats the point. Read it the moment you are stuck for more
    than ten minutes, and after you finish, to check what you missed.
-2. **The data is generated, and it expires.** Every scenario is pinned to the previous UTC business
-   day. Data generated last week will not appear in a "last 48 hours" search. Regenerate before
-   each sitting (§4). This single issue causes more "the query returns nothing" than everything
+2. **The data is generated, and it expires.** Every scenario lands in the 24 hours before you ran
+   the generator (its `--anchor`, default now), whatever the weekday; the handouts' "yesterday" is
+   that window. Data generated last week will not appear in a "last 48 hours" search. Regenerate
+   before each sitting (§4). This single issue causes more "the query returns nothing" than everything
    else combined.
 3. **You are seat one of one.** Set `WORKSHOPUID` yourself. Any two-digit number in 10–49 works;
    `12` is fine. Every port in the course is built from it.
 4. **Nothing is released in stages.** In a class the labs appear one at a time. You have the whole
    repository from the start. The `stage-*` checkpoint tags in the student repo are a classroom
-   mechanism; working from the authoring repo, `git checkout -- labs/<dir>` against your own
-   history does the same recovery job.
+   mechanism and the tags do not exist in this repository, so the handouts' recovery line
+   (`git checkout stage-<name> -- labs/<dir>`) fails here. The equivalent is
+   `git checkout HEAD -- labs/<dir>`, which restores that lab's files from your own clone.
 5. **The slides are still worth reading.** `slides/*.md` is Marp markdown and reads fine as text.
    Each module's deck carries the *why* that the handout assumes you were told. `AGENDA.md` maps
    modules to labs.
@@ -47,29 +50,92 @@ repository; the walkthroughs stand in for the instructor.
 
 ## 3. Setting up
 
+### Where to run it
+
+The whole course runs on one Linux box: Gravwell and its sidecar in docker, the agent and the
+proxies as ordinary processes, you in a shell. What that box needs:
+
+| | |
+|---|---|
+| **OS** | Any Linux with docker and the compose plugin. The commands below are Debian/Ubuntu; translate the package names elsewhere. A VM or a bare machine, not a container: the labs run docker themselves, and docker-inside-a-container is outside what this guide covers. On Windows, Ubuntu 24.04 under WSL2 counts as that Linux box (see below) |
+| **You** | A normal user in the `docker` group, not root. Every handout path is `~/jarvis/...` in that user's home |
+| **Outbound** | `api.anthropic.com` (the labs that call a model); Docker Hub and `ghcr.io` (the Gravwell, LLM-ingester and litellm images); `github.com` (the opencode binary, the kits mirror); `kits.gravwell.io` (Lab 05's kit, optional, GitHub is the fallback); `ollama.com` if Lab 01b's model runs here |
+| **Inbound** | Nothing. Every service binds the box itself and you reach it from the box's shell, except the Gravwell UI, below |
+
+**Reaching the Gravwell UI.** It listens on `https://<box>:<ID>443` (`12443` for seat id `12`).
+On a box with a desktop, browse to `https://localhost:12443`. On a headless or remote VM, tunnel it
+from your laptop and keep the firewall closed:
+
+```bash
+ssh -L 12443:localhost:12443 you@your-vm        # then browse https://localhost:12443
+```
+
+Opening `<ID>443` in the VM's firewall to your own address works too; nothing in the course needs
+any other port reachable from outside. The handouts say `https://<lab-host>:<ID>443`, which in a
+class is the shared host; for you it is the tunnel or the box's address.
+
+**Windows: run it in WSL2.** Ubuntu 24.04 under WSL2 with systemd on (`systemctl status` answers;
+if not, put `systemd=true` under `[boot]` in `/etc/wsl.conf` and `wsl --shutdown`) is a Linux box
+for every purpose here. Docker, Ollama, opencode and every command in the handouts run inside the
+Ubuntu shell, never in PowerShell (`nc -q1` and friends are Linux commands). No tunnel and no
+firewall rule: Windows forwards `localhost` into WSL2, so browse to `https://localhost:12443` in
+Edge or Chrome on Windows. The certificate is self-signed (§4) and the browser says so; **Advanced →
+Continue to localhost** once per browser. A browser or tool without that button needs the
+certificate trusted instead; from PowerShell:
+`certutil -user -addstore Root \\wsl$\<distro>\home\<you>\jarvis\labs\00-environment-gravwell\config\cert.pem`
+(the §4 recipe gives the certificate a `localhost` SAN, which Chromium requires). After
+`usermod -aG docker`, close the WSL terminal and open a new one; `wsl --shutdown` if
+`docker run hello-world` still says permission denied. The whole course was run this way on
+WSL2 with 8 GB and 4 CPUs.
+
 ### What to install
 
 ```bash
-sudo apt update && sudo apt install -y docker.io docker-compose-v2 jq netcat-openbsd python3 git
+sudo apt update && sudo apt install -y curl jq netcat-openbsd python3 git openssl zstd
+curl -fsSL https://get.docker.com | sudo sh          # docker engine + the compose plugin
 sudo usermod -aG docker "$USER"      # then log out and back in, or docker.sock is denied
 ```
 
-Anything with docker, `jq`, `nc` and Python 3 works; the commands above are Debian/Ubuntu.
+Anything with docker, the compose plugin, `curl`, `jq`, `nc` and Python 3 works; the commands
+above are Debian/Ubuntu (`zstd` is for Ollama's installer, which stops without it). Docker's own installer is used because the distro package names differ
+(`docker-compose-v2` on Ubuntu, `docker-compose` on Debian 13), and one wrong name makes apt
+install nothing at all. Two fresh-install quirks seen on Debian 13: a machine installed from the
+DVD image still points apt at the DVD (replace `/etc/apt/sources.list` with the
+`deb.debian.org` lines for your release before anything else), and the minimal image has no
+`curl`, which Lab 01 is made of.
+
+Three more, for the labs that run an agent. opencode (Lab 04 onwards) the way the class host gets
+it, a static binary with no node required:
+
+```bash
+a=$(uname -m | sed 's/x86_64/x64/; s/aarch64/arm64/'); d=$(mktemp -d)
+curl -fsSL "https://github.com/sst/opencode/releases/latest/download/opencode-linux-$a.tar.gz" \
+    | tar -xz -C "$d"
+sudo install -m 0755 "$(find "$d" -type f -name opencode | head -1)" /usr/local/bin/opencode
+rm -rf "$d"; opencode --version          # the course was measured on 1.18.x
+```
+
+(Do not unpack it straight into `/tmp`: opencode uses `/tmp/opencode` as a work directory and
+refuses to start if a file by that name is sitting there.)
+
+Claude Code, only for the optional P4 lab (`curl -fsSL https://claude.ai/install.sh | bash`), and
+Ollama, only for Lab 01b (`SETUP.md` section 3).
+
+**What to ignore.** `instructor/runbook/`, `share/` and `student-repo/` build and operate a
+classroom host (seats, the share site, staged releases); `.env.example` is that host's config.
+None of it applies to one person on one box. `instructor/walkthroughs/` is the part of
+`instructor/` you do want.
 
 ### The repository
 
 ```bash
 git clone <this repo> ~/jarvis && cd ~/jarvis
-cp .env.example .env
 ```
 
-Edit `.env` and set at least:
-
-```bash
-ANTHROPIC_API_KEY="sk-ant-..."     # yours, spend-limited
-WORKSHOPUID="12"                   # your seat id, 10-49
-GRAVWELL_INGEST_SECRET="IngestSecrets"
-```
+Then create `~/.workshop_env` exactly as [`SETUP.md`](../SETUP.md) section 1 shows: the API key,
+your seat id, the ingest secret, the Lab 01b model URL, and the block that exports the Gravwell
+token once Lab 00 has minted it. Every lab, and the Lab 00 compose, read those from your shell; it
+is the one file that has to be right.
 
 Leave `WORKSHOP_CERT_DIR` unset. The compose falls back to
 `labs/00-environment-gravwell/config/`, so drop a `cert.pem` and `key.pem` there. A self-signed
@@ -78,25 +144,23 @@ pair is fine:
 ```bash
 cd ~/jarvis/labs/00-environment-gravwell/config
 openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
-    -keyout key.pem -out cert.pem -subj "/CN=localhost"
-```
-
-Then make the two variables available to every shell you work in:
-
-```bash
-cat >> ~/.bashrc <<'EOF'
-export WORKSHOPUID=12
-export ANTHROPIC_API_KEY="sk-ant-..."
-EOF
+    -keyout key.pem -out cert.pem -subj "/CN=localhost" \
+    -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"   # browsers and node check the SAN, not the CN
 ```
 
 ### The Gravwell license and the API key
 
-Both are covered step by step in [`SETUP.md`](../SETUP.md): a free **Community Edition** license
-from <https://www.gravwell.io/download> saved as `gravwell.license` in the repository root, and an
-Anthropic API key with a spend limit. Community Edition is enough for every lab here. Without a
-license file the stack starts and immediately stops, with nothing useful in `docker compose logs`,
-which is a confusing first hour if you do not know to look for it.
+Both are covered step by step in [`SETUP.md`](../SETUP.md). The license needs no sign-up:
+Gravwell's built-in **free tier** (2 GB/day, never expires, more than this course ever ingests) is
+activated by a file at the repository root whose entire content is the word `UNLICENSED`:
+
+```bash
+printf 'UNLICENSED' > ~/jarvis/gravwell.license    # no trailing newline; wc -c says 10
+```
+
+The API key is an Anthropic key with a spend limit. Without a license file the stack comes up but
+refuses every login and ingest connection with `{"Error":"missing license"}`, with nothing useful
+in `docker compose logs`, which is a confusing first hour if you do not know to look for it.
 
 ### Bring it up
 
@@ -169,11 +233,13 @@ The course is a sequence, not a Day-1/Day-2 script. This order is the one the na
 | 12 | | **Lab 05**: litellm, then the two content-capturing proxies | 2.0 |
 | 13 | | **P2**: extend the proxy · **P4**: a second client (both optional) | 1.5 |
 | 14 | `slides/06-mcp.md` | **Lab 06**: MCP by hand, then build a server | 2.5 |
-| 15 | | **P8**: audit an AI assistant from its own logs (optional) | 0.75 |
-| 16 | `materials/ai-audit-checklist.md` | write your own version for your own environment | 0.5 |
+| 15 | `slides/07-mcp-tool-interaction.md` | **Lab 07 Parts 1 and 2**: the chain, then the thief | 1.5 |
+| 16 | `slides/08-detections.md` | **Lab 07 Part 3**: catch it in `tag=llm`, schedule the canary | 1.0 |
+| 17 | | **P8**: audit an AI assistant from its own logs (optional) | 0.75 |
+| 18 | `materials/ai-audit-checklist.md` | write your own version for your own environment | 0.5 |
 
 Labs 01 and 01b need nothing but a network connection, so they are a good first evening. Lab 00
-through Lab 03 is a coherent second block. Labs 04 to 06 are the second half and want a clear run.
+through Lab 03 is a coherent second block. Labs 04 to 07 are the second half and want a clear run.
 
 ---
 
@@ -213,10 +279,10 @@ A working rhythm that holds up:
 
 ```bash
 ollama pull llama3.2
-ollama pull qwen3-embedding          # or: nomic-embed-text
+ollama pull qwen3-embedding:0.6b     # the tag matters: plain qwen3-embedding is the 4.7 GB 8B model
 export GRAVWELL_LLM_URL=http://127.0.0.1:11434
 export MODEL=llama3.2
-export EMBED_MODEL=qwen3-embedding
+export EMBED_MODEL=qwen3-embedding:0.6b
 cd ~/jarvis/labs/01b-demystifying-ai && ./tokens.bash
 ```
 
@@ -243,11 +309,16 @@ traffic you just generated: it comes off the kit server, or from
 <https://github.com/gravwell/kits/tree/main/llm_observability> if your instance has no egress. The finished-early pointer to semantic search is P3, below.
 
 **Lab 06 (MCP).** Works as written against your own Gravwell. Part 2 needs opencode from Lab 04.
-For Lab 07's remote Gravwell MCP server you will need `export NODE_TLS_REJECT_UNAUTHORIZED=0`
-because of the self-signed certificate, in a shell that has `$GRAVWELL_TOKEN`.
+For Lab 07's remote Gravwell MCP server, opencode has to trust your self-signed certificate: in
+the shell that has `$GRAVWELL_TOKEN`,
+`export NODE_EXTRA_CA_CERTS=~/jarvis/labs/00-environment-gravwell/config/cert.pem` (verified
+with opencode 1.19). The handout's `export NODE_TLS_REJECT_UNAUTHORIZED=0` is the blunt fallback;
+it switches verification off for everything that process talks to.
 
-**Lab 07 (MCP tool interaction).** Works as written: it reuses the Lab 06 servers and opencode
-config, and Part 3 searches the `tag=llm` traffic you generated in Parts 1 and 2.
+**Lab 07 (a malicious MCP server).** Works as written: it reuses the Lab 06 servers and opencode
+config, plants its flag through a Lab 00 listener (`docker compose up -d --force-recreate gravwell` once
+if your stack predates it), and Part 3 searches the `tag=llm` traffic you generated in Parts 1 and 2. The "attacker's
+server" is a file in your home directory; nothing leaves your machine.
 
 **M12 (detections).** Is Lab 07 Part 3 plus the `slides/08-detections.md` deck; treat writing your own
 scheduled search from one of those queries as the capstone.

@@ -3,7 +3,7 @@
 > ⛔ **INSTRUCTOR ONLY.** Contains every answer. Student handout:
 > [`labs/02-shadow-ai/README.md`](../../labs/02-shadow-ai/README.md).
 
-**Module:** M4 + Lab B · **Budget:** 75 min (slides + lab) · **Checkpoint:** `stage-shadowai`
+**Module:** M4 + Lab 02 · **Budget:** 75 min (slides + lab) · **Checkpoint:** `stage-shadowai`
 **Flex:** 🔒 core, Method 4 (SSO) is ⤵ droppable for −15 min
 **Deck:** [`slides/03-shadow-ai.md`](../../slides/03-shadow-ai.md)
 
@@ -90,7 +90,7 @@ things; and no network log tells you what was said.
 | 0–20 | Slides: the four signals, why each is a *signal* and not proof |
 | 20–25 | Ingest the data, confirm tags |
 | 25–45 | Methods 1–3 hands-on (tasks 1, 6) |
-| 45–60 | The correlation correlation query (tasks 2–5) |
+| 45–60 | The correlation query (tasks 2–5) |
 | 60–70 | Volume outlier + the pivot to Lab 03 (tasks 7–8) |
 | 70–75 | Debrief: "what would you tell your CISO?" |
 
@@ -166,7 +166,7 @@ tag=corelight_dns limit 5
 |---|---|---|
 | `nc` hangs and never returns | No `-q1` | `-q1` makes it quit 1s after EOF. It's in the handout; people still drop it |
 | Connection refused | Stack isn't up, or wrong port | `docker compose ps`; `ss -ltn \| grep ${WORKSHOPUID}0` |
-| Tag exists but zero results | **Time range.** | The listeners use `Ignore-Timestamps=true`, so records land at *ingest* time. Search "last 15 minutes" right after ingest, or "last 48 hours" generally (no 48-hour preset in the picker? "last 7 days" works too) |
+| Tag exists but zero results | **Time range.** | The Corelight and Okta listeners extract each record's own timestamp (`Timestamp-Format-Override="RFC3339"`), so the data sits in the previous UTC business day, not at ingest time: search **last 48 hours** (or last 7 days). "Last 15 minutes" after ingest returns nothing by design |
 | Ingested twice, counts doubled | Ran `nc` again | Harmless for every task here. Say so; don't let them restart |
 
 ---

@@ -96,13 +96,13 @@ proxy, not the vendor dashboard, is where auditing lives.
 > nothing, while `semantic "someone leaked a credential"` finds *"I accidentally committed an API
 > key…"*. It needs an embeddings model on both the ingester and the webserver, so it runs on the
 > instructor's stack as a demo rather than on your seat. Read the **Semantic search over LLM logs**
-> page (P3) on the share site now, so the demo makes sense when it comes, and note what you would
+> page (P3, `labs/_stretch/semantic-search/README.md`, also on the share site) now, so the demo makes sense when it comes, and note what you would
 > have to configure to run it at home. (Working through this on your own? The same page has the
 > full config, and `scripts/enable-semantic.sh` in the authoring repo brings the pieces up.)
 
 ## Part 2a2: someone already built the dashboards
 
-You have written four queries against your own traffic. Now get the rest for free, the same way you
+You have written two queries against your own traffic and answered four questions with them. Now get the rest for free, the same way you
 did in Labs 02 and 03: Gravwell publishes an **LLM Observability** kit for exactly this ingester.
 
 1. In the left navigation open **Kits**, browse the kit server, find **LLM Observability** and
@@ -172,7 +172,9 @@ emits the **same events** as JSONL to a file, stdout, TCP, or syslog.
    Task: find the `request.tools_offered` event. That is the list of everything the agent *could*
    have done: the ingester doesn't record this; why might you want it?
 4. **Stretch:** in the proxy's terminal, `Ctrl-C` it and start it again with
-   `--upstream-key "$ANTHROPIC_API_KEY" --client-key hunter2`, then remove the real key from
+   `PROXY_UPSTREAM_KEY="$ANTHROPIC_API_KEY"` in front of the command and `--client-key hunter2` after
+   it (the key goes in the proxy's environment, not its argv: `ps` shows argv to every user on a
+   shared host), then remove the real key from
    opencode's config (`apiKey: "hunter2"`). Discuss: the proxy is now a *gateway*, the real key never
    reaches the workstation.
 
@@ -222,7 +224,8 @@ a `[^\n]+` capture runs past the line end (use `[^\\ ]+` there instead).
 5. **Count the system prompts.** One question of yours produced more than one.
    ```
    tag=llm intrinsic event_type | grep -e event_type request.system_message
-   | eval fp = hash_sha256(DATA); chars = len(DATA); | stats count by fp chars | table fp chars count
+   | eval fp = hash_sha256(DATA); chars = len(DATA);
+   | stats count by fp chars | table fp chars count
    ```
    Tasks: how many distinct system prompts, of what sizes? Read the short one: what is it for, who
    asked for it, which `session_id` is it billed to, and (add `model` to the search) **which model
@@ -282,7 +285,7 @@ Tasks:
 - (c) Hunt for the shapes an auditor actually cares about, across everything the client sent:
   ```
   tag=llm intrinsic event_type
-  | regex -e DATA "(?P<secretish>sk-[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]+PRIVATE KEY-----)"
+  | regex -e DATA "(?P<secretish>sk-[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}|BEGIN [A-Z ]+PRIVATE KEY)"
   | table event_type secretish DATA
   ```
   It is usually empty today. If it is not, do not shrug: find the event that carried the match and

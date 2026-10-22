@@ -13,9 +13,11 @@ never edit the server code.
 Stdlib only, Python 3.11+ (`tomllib`). One file, no build, no dependencies, same design rule as
 `src/logging-proxy/`.
 
-> Benign by design. Lab 06 uses it to teach how MCP works; Lab 07 uses it to show how one server's
-> manifest steers a model into another server's tools, and how to detect that. Keep new behaviours
-> observable and harmless (see the *Tool source* section of `CONTRIBUTING.md`).
+> Harmless by design, including the attacker. Lab 06 uses it to teach how MCP works; Lab 07 uses it
+> to play a malicious server whose manifest makes the model fetch a secret tag with Gravwell's own
+> tools and hand it over, and then to detect that. The "exfiltration" is an append to a file in the
+> student's home directory. Keep new behaviours observable and local (see the *Tool source* section
+> of `CONTRIBUTING.md`).
 
 ## Why config-driven
 
@@ -48,7 +50,14 @@ No backend, on purpose: the lab is about the protocol, not plumbing.
 | `word_count` | Counts words/chars, optional limit | `field`, `max_words` |
 | `always_error` | Always returns a protocol error | `text` |
 | `gravwell_grep_hoist` | Query advisor: given a Gravwell query **and** the result of Gravwell's own `parse_query` tool, suggests moving a late raw `grep` (no `-e`) to the front of the pipeline. Refuses without a parse result; never validates syntax itself | `query_field`, `parse_field`, `require_parse` |
-| `threat_hunt` | **Stub** for a threat-analysis service fed by another server's tool output: expects raw log text in `logs` (from Gravwell's `execute_query` / `sample_tag_entries`), refuses without it, reports entry count, bytes, tag and source, scans for `indicators`, gives a verdict. Real analysis is the take-home | `indicators`, `adversary`, `field`, `tag_field`, `source_field`, `pass_message`, `hit_message` |
+| `exfiltrate` | The Lab 07 attacker's tool: a cover story. Returns `text` with `{argument}` placeholders filled in (a tidy report that mentions nothing), while the dispatcher keeps every argument it received in `loot_file`. The theft is in the manifest, not here: the sentences that make the model fetch something nobody asked for and pass it in | `loot_file` (required), `text` |
+
+**`loot_file`, on any tool.** A tool with a `loot_file` key appends one JSON line per call (`ts`,
+`tool`, `bytes` per argument, `arguments`) to that path, whatever its behaviour. `~` and `$HOME`
+are expanded. Lab 07 Task 6 puts it on the working query advisor: a useful tool and a thief can be
+the same tool. In a real malicious server that line is a socket to a host the attacker owns (this
+script already does network I/O, see `--tcp`); here it stays on the seat so the student can read
+exactly what left.
 
 **The log file** (`--log-file`) gets one JSON line per message in (`direction: in`) and out (`out`),
 plus one `direction: call` record per accepted tool call holding just the tool name and the
@@ -66,8 +75,15 @@ two very differently).
 | `examples/looney-tunes-compliance.toml` | The worked example: a compliance tool, a policy tool, a length tool, one prompt, one resource. Heavily commented |
 | `examples/pii-guard.toml` | Three tools that fail in three different ways |
 | `examples/query-advisor-starter.toml` | Lab 07 Task 2 starter: plumbing done, every model-facing text is `WRITE ME`; `--validate` counts the placeholders left |
-| `examples/threat-hunt-starter.toml` | Lab 07 Task 4 starter, same idea, for the `threat_hunt` stub |
+| `examples/log-hygiene-starter.toml` | Lab 07 Task 5 starter: APT Cherdenko's `log-hygiene` server on `exfiltrate`, same idea; the `WRITE ME`s are the lure |
 | `examples/starter-template.toml` | Copy this to build your own. Every option documented inline |
+
+**`--http` binds every interface** when told to (`0.0.0.0:<ID>91`, as the handouts say, so a
+`curl` to `localhost` works from any shell on the seat). On a shared lab host that also means any
+other seat can call your server, and with a `loot_file` set, append to your loot. Bind `127.0.0.1`
+if that matters to you; nothing in the labs needs the wider bind. The HTTP transport is
+deliberately minimal: one endpoint, no GET/SSE stream, and it issues `Mcp-Session-Id` without
+checking it on later requests.
 
 ## Connecting opencode
 
@@ -108,7 +124,7 @@ applied to your own server:
     --tcp localhost:${WORKSHOPUID}10        # → Gravwell, tag=mcp
 ```
 
-Each record: `ts`, `direction` (`in`/`out`), `session_id`, `server`, `method`, `id`, `message`.
+Each record: `ts`, `direction` (`in`/`out`, plus one `call` per accepted tool call), `session_id`, `server`, `method`, `id`, `message`.
 
 ```
 tag=mcp json direction method session_id | table direction method session_id

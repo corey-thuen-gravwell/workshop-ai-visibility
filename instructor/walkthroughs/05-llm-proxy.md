@@ -3,7 +3,7 @@
 > ⛔ **INSTRUCTOR ONLY.** Contains every answer. Student handout:
 > [`labs/05-llm-proxy/README.md`](../../labs/05-llm-proxy/README.md).
 
-**Modules:** M8 (Lab E, 60 min) + M9 (Lab F, 105 min) = **165 min**
+**Modules:** M8 (Lab 05 Part 1, 60 min) + M9 (Lab 05 Part 2, 105 min) = **165 min**
 **Checkpoint:** `stage-llm-proxy` (one for the whole lab)
 **Flex:** M8 is ⏱ and is the **first thing to cut** (−60); M9 is 🔒
 **Deck:** [`slides/05-opencode-proxy.md`](../../slides/05-opencode-proxy.md)
@@ -71,8 +71,8 @@ the system prompt is the part of this module people quote back to you months lat
 ## Prerequisites
 
 - Lab 00 stack up, including the `<ID>llm` sidecar. **litellm's syslog logging driver connects at
-  container start**: if Gravwell isn't listening on `<ID>514/udp`, the litellm container fails to
-  start. Bring Gravwell up first, always.
+  container start**: if Gravwell isn't listening on `<ID>09` (the raw-text litellm listener in
+  `simple_relay-litellm.conf`), the litellm container fails to start. Bring Gravwell up first, always.
 - `stage-opencode` (Lab 04): opencode installed and working against a provider.
 - A **live** `ANTHROPIC_API_KEY` in `~/.workshop_env`. This is the first module that actually
   spends tokens. Twenty seats × a handful of short prompts is small money, but confirm the key
@@ -108,7 +108,7 @@ docker compose logs --tail 20
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Container exits immediately, `failed to initialize logging driver` | Gravwell isn't up: nothing on `<ID>514/udp` | Start the Lab 00 stack first, then `docker compose up -d` here |
+| Container exits immediately, `failed to initialize logging driver` | Gravwell isn't up: nothing on `<ID>09` (the syslog driver's `tcp://127.0.0.1:<ID>09` target) | Start the Lab 00 stack first, then `docker compose up -d` here |
 | `ANTHROPIC_API_KEY: unbound variable` | Non-interactive shell | `. ~/.workshop_env` |
 | 401 from the gateway | Client didn't present the master key | It's `sk-workshop` unless `LITELLM_MASTER_KEY` was overridden |
 | `port is already allocated` | Two seats on one ID, or a stale container | `docker ps -a` |
@@ -300,7 +300,7 @@ Sixty-four input tokens for every output token.
 
 *Beat:* this is per-session cost attribution the vendor dashboard will not give you, on data you
 own. And look at the ratio: `prompt_tokens` climbs every turn because the client resends the whole
-conversation each time (M2). **The stateless-API lesson from this morning is now a line on a bill.**
+conversation each time (M2). **The stateless-API lesson from M2 is now a line on a bill.**
 
 **(d) How many sessions are there, and how did the proxy decide?**
 `count by session_id`. The ingester assigns a session either from the
@@ -454,7 +454,7 @@ Full event vocabulary, both sources:
 
 ```bash
 ./llm_audit_proxy.py --listen 0.0.0.0:${WORKSHOPUID}90 --upstream https://api.anthropic.com \
-    --upstream-key "$ANTHROPIC_API_KEY" --client-key hunter2 --log-file ~/proxy.jsonl
+    --client-key hunter2 --log-file ~/proxy.jsonl     # with PROXY_UPSTREAM_KEY="$ANTHROPIC_API_KEY" in front
 ```
 
 Then remove `ANTHROPIC_API_KEY` from opencode's environment and give it `hunter2` instead.
@@ -524,10 +524,6 @@ Rule-shouting in that prompt: IMPORTANT x 3, NEVER x 3, MUST x 1. Count it live,
 *Two models for one question.* The title generator is billed to `claude-haiku-4-5` while the work
 runs on Sonnet. Anyone whose AI inventory says "we use Sonnet" is already wrong, and only the proxy
 knows.
-
-Reference capture without a stack: `gravwell-evidence/lab05-llm-proxy/`
-(`part2c-seat29-system-prompts.csv` is the three prompts as `| text` returned them,
-`part2c-opencode-system-prompt.jsonl` is the same client through the Python proxy against the mock).
 
 ## Step 10: read it (5 min)
 

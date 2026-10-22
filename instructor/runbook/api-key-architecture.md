@@ -72,8 +72,14 @@ demonstrate live.
 `scripts/llm_relay.py` on **`127.0.0.1:9010`**, in front of the Gravwell research LLM that Lab 01b
 (demystifying how AI thinks) uses. Seats get `GRAVWELL_LLM_URL=http://127.0.0.1:9010` and nothing
 else; the relay adds the bearer token and forwards only `/api/generate`, `/api/embed`, `/api/tags`.
-The token exists on the host in exactly two places: `/opt/workshop/gravwell-llm.env` (root, 0600) and
-root's relay process. **For this lab, and this lab only.**
+The token exists on the host in three root-only places: `/opt/workshop/gravwell-llm.env` (0600),
+root's relay process, and the synced authoring copy `/opt/workshop/src/instructor/runbook/gravwell-llm.env`
+(0600, under a 0750 tree seats cannot enter). **For this lab, and this lab only**, with one
+documented exception: the optional P3 demo (`enable-semantic.sh up`) writes the same token into the
+demo stack's `ai.conf` and `llm_ingester.conf`, which are mounted into the `39gravwell` and `39llm`
+containers. Seats are in the `docker` group, so any seat can `docker exec` into those containers and
+read it. Accept that for the length of the demo, or run P3 from the backup slides, and take the
+stack down (`enable-semantic.sh down`) and rotate the token the same day.
 
 Why this doesn't contradict the three reasons above:
 

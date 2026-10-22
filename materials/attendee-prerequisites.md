@@ -52,13 +52,13 @@ means you reached the SSH service. `Connection timed out` or `Connection refused
 blocked, and that is the one to escalate.
 
 ```bash
-curl -sS -o /dev/null -w "%{http_code}\n" https://<lab-host>/
+curl -sS -o /dev/null -w "%{http_code}\n" https://share.<lab-host>/
 ```
 
 You want **401**. The site asks for a password that the instructor reads out at the start; a 401
 proves you can reach it. A hang or a certificate error is the problem to report.
 
-Then open <https://<lab-host>/> in your browser and confirm you get a password prompt
+Then open <https://share.<lab-host>/> in your browser and confirm you get a password prompt
 rather than a corporate block page.
 
 **Windows without PowerShell:** PuTTY (`<lab-host>`, port 22) shows a login prompt if
@@ -80,7 +80,7 @@ port is yours is decided on the day.
 
 - A laptop with a working terminal and browser, and its charger.
 - Comfort with a command line is helpful but not assumed. Everything you type is written out in the
-  handouts, and you get a cheatsheet with every command in it on the first morning.
+  handouts, a Linux survival card on the first morning, and a query cheatsheet whenever you want one.
 
 ## If the exception is refused
 

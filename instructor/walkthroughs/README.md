@@ -19,7 +19,7 @@ the handouts; they belong here, in each walkthrough's failure tables.
 
 | Walkthrough | Module | Lab |
 |---|---|---|
-| [`00-environment-gravwell.md`](00-environment-gravwell.md) | Lab A | `labs/00-environment-gravwell/` |
+| [`00-environment-gravwell.md`](00-environment-gravwell.md) | Lab 00 | `labs/00-environment-gravwell/` |
 | [`01-fundamentals.md`](01-fundamentals.md) | M2 | `labs/01-fundamentals/` |
 | [`01b-demystifying-ai.md`](01b-demystifying-ai.md) | M2b | `labs/01b-demystifying-ai/` |
 | [`02-shadow-ai.md`](02-shadow-ai.md) | M4 | `labs/02-shadow-ai/` |
@@ -27,7 +27,7 @@ the handouts; they belong here, in each walkthrough's failure tables.
 | [`04-opencode-config.md`](04-opencode-config.md) | M7 | `labs/04-opencode-config/` |
 | [`05-llm-proxy.md`](05-llm-proxy.md) | M8 + M9 | `labs/05-llm-proxy/` |
 | [`06-mcp-deep-dive.md`](06-mcp-deep-dive.md) | M10 | `labs/06-mcp-deep-dive/` |
-| `07-mcp-tool-interaction.md` | M11 + M12 | Lab 07: the query advisor chained with Gravwell's MCP server, manifests that reach across servers, and the `tag=llm` detections |
+| [`07-mcp-tool-interaction.md`](07-mcp-tool-interaction.md) | M11 + M12 | `labs/07-mcp-tool-interaction`: the chain, the malicious `log-hygiene` server, the `tag=llm` detections |
 | [`_stretch-ai-assistant-audit.md`](_stretch-ai-assistant-audit.md) | P8 | `labs/_stretch/ai-assistant-audit/` |
 | [`_stretch-extend-the-proxy.md`](_stretch-extend-the-proxy.md) | P2 | `labs/_stretch/extend-the-proxy/` |
 | [`_stretch-second-client.md`](_stretch-second-client.md) | P4 | `labs/_stretch/second-client/` |

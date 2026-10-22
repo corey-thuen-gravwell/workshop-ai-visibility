@@ -94,7 +94,7 @@ tag=sysmon winlog EventID == 1 ParentProcessId == 3565 Image ~ bash CommandLine
 tag=sysmon winlog EventID == 1 Image ~ bash ParentProcessId
 | count by ParentProcessId
 | eval count > 10
-| sort by count desc | table ParentPID count
+| sort by count desc | table ParentProcessId count
 ```
 
 Any parent PID spawning **>10 bash children** is worth a look.

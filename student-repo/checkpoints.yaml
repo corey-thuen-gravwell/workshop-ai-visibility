@@ -39,7 +39,7 @@ checkpoints:
 
   - tag: stage-gravwell
     order: 10
-    module: Lab 00 (Lab A)
+    module: Lab 00
     summary: Gravwell + LLM-ingester sidecar compose, listener configs, the workshop license.
     paths: [labs/00-environment-gravwell, gravwell.license]
 
@@ -94,5 +94,5 @@ checkpoints:
   - tag: stage-mcp-tools
     order: 80
     module: Lab 07 (M11 + M12)
-    summary: MCP tool interaction across servers (the query advisor chained with Gravwell's own MCP server), and detecting it in tag=llm.
+    summary: A malicious MCP server (the query advisor chained with Gravwell's own MCP server, then APT Cherdenko's log-hygiene thief and the planted flag.txt), and catching it in tag=llm.
     paths: [labs/07-mcp-tool-interaction]

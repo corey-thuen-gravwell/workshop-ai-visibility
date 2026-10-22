@@ -3,7 +3,7 @@
 > ⛔ **INSTRUCTOR ONLY.** Do not distribute. Student handout:
 > [`labs/00-environment-gravwell/README.md`](../../labs/00-environment-gravwell/README.md).
 
-**Module:** Lab A · **Budget:** 60 min · **Checkpoint:** `stage-gravwell` · **Flex:** 🔒 never cut
+**Module:** Lab 00 · **Budget:** 60 min · **Checkpoint:** `stage-gravwell` · **Flex:** 🔒 never cut
 
 This is the module that decides whether the rest of the class works. Every later lab assumes a
 running, licensed, reachable Gravwell. Budget the full hour and do **not** let it run long by
@@ -15,8 +15,8 @@ debugging one seat in front of the room, see *Triage* below.
 
 | Min | Segment | Notes |
 |---:|---|---|
-| 0–10 | SSH in, verify the seat | The slowest part. Windows attendees + PuTTY are the long pole |
-| 10–15 | `docker run hello-world` | Proves the docker group applied |
+| 0–5 | Stragglers: anyone not yet on a seat (Lab 01's seat check did the SSH; Windows + PuTTY is the long pole there) | |
+| 5–15 | `docker run hello-world` | Proves the docker group applied; the first thing Lab 01 did not need |
 | 15–25 | `docker compose up -d`, watch it come up | Image is pre-pulled; should be fast |
 | 25–40 | Browse the UI, log in | Cert warnings and typo'd ports live here |
 | 40–50 | First `tag=` search in Query Studio | Teach the query bar, not the data |
@@ -47,13 +47,12 @@ handout fails. Re-run it the morning of class so Lab 02/03 data lands inside the
 Also confirm the images are present so 20 seats don't pull simultaneously over venue wifi:
 
 ```bash
-docker image inspect gravwell/gravwell:latest gravwell/llm_ingester:5.10.1 \
+docker image inspect gravwell/gravwell:5.10.1 gravwell/llm_ingester:5.10.1 \
     hello-world:latest >/dev/null && echo pulled
 ```
 
-> Note: `preflight.sh` checks for `gravwell/llm_ingester:**latest**` but the compose pins
-> `:5.10.1`. Pre-flight will warn even when the correct image is present. Harmless, but don't let
-> it send you chasing a non-problem.
+(Both pinned on purpose: a stale `gravwell/gravwell:latest` in the cache is 5.8.x, where
+`/api/mcp` does not exist and Lab 06 cannot run.)
 
 ---
 
@@ -179,6 +178,22 @@ Useful framing: their timeline is *not* empty, but everything in it is **the SIE
 itself**. No security data until Lab 02. That's a truer picture of a new deployment than an empty
 screen, and it gives them something to click.
 
+The handout's follow-up, `tag=gravwell syslog Appname | count by Appname | sort by count desc |
+table Appname count`, returns four rows on a fresh seat (measured, seat 29, a day of uptime):
+
+```
+Appname,count
+webserver,2115
+indexer,594
+simplerelay,77
+llmingester,70
+```
+
+Point at the four names (the two Gravwell halves, the relay their `nc` will feed in Lab 02, the
+sidecar Lab 05 lives on), and at the shape: `extract | aggregate | render` is every query from here
+to Lab 07. Then the Discussion question lands: which of *your* security tools write a diary, and
+does anyone read it?
+
 Teach three things and stop:
 
 1. **The time picker.** Every "no results" complaint from here on is a time-range
@@ -230,10 +245,11 @@ Worth doing if you're ahead of schedule: it turns Lab 02's "nothing showed up" i
 five-second check instead of a ten-minute debug:
 
 ```bash
-ss -ltn | grep -E ":(${WORKSHOPUID}0[1-8])\b"
+ss -ltn | grep -E ":(${WORKSHOPUID}(0[1-9]|1[0-5]))\b"
 ```
 
-**Expected:** eight listeners, `<ID>01`–`<ID>08`.
+**Expected:** fifteen listeners, `<ID>01`–`<ID>15` (one per data source the later labs feed; the
+compose comments say which is which).
 
 ---
 
