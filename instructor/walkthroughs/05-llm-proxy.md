@@ -453,8 +453,9 @@ Full event vocabulary, both sources:
 > optional: it's the payoff for the whole key discussion, and it takes four minutes.
 
 ```bash
+PROXY_UPSTREAM_KEY="$ANTHROPIC_API_KEY" \
 ./llm_audit_proxy.py --listen 0.0.0.0:${WORKSHOPUID}90 --upstream https://api.anthropic.com \
-    --client-key hunter2 --log-file ~/proxy.jsonl     # with PROXY_UPSTREAM_KEY="$ANTHROPIC_API_KEY" in front
+    --client-key hunter2 --log-file ~/proxy.jsonl
 ```
 
 Then remove `ANTHROPIC_API_KEY` from opencode's environment and give it `hunter2` instead.

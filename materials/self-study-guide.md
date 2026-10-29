@@ -145,7 +145,7 @@ pair is fine:
 cd ~/jarvis/labs/00-environment-gravwell/config
 openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
     -keyout key.pem -out cert.pem -subj "/CN=localhost" \
-    -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"   # browsers and node check the SAN, not the CN
+    -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"   # browsers check the SAN, not the CN
 ```
 
 ### The Gravwell license and the API key
